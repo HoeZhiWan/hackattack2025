@@ -1,38 +1,34 @@
-// common.rs - Shared types and utilities for the firewall module
-use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
-use std::vec::Vec;
-use thiserror::Error;
+// common.rs - Shared types and utilities for the firewall
+use std::sync::{Arc, Mutex};
+use std::fmt;
 use tauri::AppHandle;
+use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
+use serde::{Serialize, Deserialize};
+use std::fs;
+use std::path::PathBuf;
 
-// Define a custom error type for our firewall operations
-#[derive(Debug, Error)]
+// Custom error type for firewall operations
+#[derive(Debug)]
 pub enum FirewallError {
-    #[error("Failed to access Windows Firewall: {0}")]
-    AccessError(String),
-    
-    #[error("Failed to create firewall rule: {0}")]
-    RuleCreationError(String),
-    
-    #[error("Failed to remove firewall rule: {0}")]
-    RuleRemovalError(String),
-    
-    #[error("Failed to fetch firewall rules: {0}")]
-    RuleFetchError(String),
-    
-    #[error("Command execution error: {0}")]
     CommandError(String),
-    
-    #[error("Parse error: {0}")]
     ParseError(String),
-    
-    #[error("Domain resolution error: {0}")]
-    DomainResolutionError(String),
+    AdminRequired(String),
 }
 
-// Serialize firewall rules for the frontend
-#[derive(Debug, Serialize, Deserialize, Clone)]
+// Implement Display trait for FirewallError
+impl fmt::Display for FirewallError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FirewallError::CommandError(msg) => write!(f, "Command Error: {}", msg),
+            FirewallError::ParseError(msg) => write!(f, "Parse Error: {}", msg),
+            FirewallError::AdminRequired(msg) => write!(f, "Admin Required: {}", msg),
+        }
+    }
+}
+
+// Structure to hold a single firewall rule
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FirewallRuleInfo {
     pub name: String,
     pub description: String,
@@ -44,97 +40,131 @@ pub struct FirewallRuleInfo {
     pub enabled: bool,
 }
 
-// Manage the firewall state
+// State for managing firewall rules
 pub struct FirewallState {
-    pub rules: Mutex<Vec<FirewallRuleInfo>>,
+    pub rules: Arc<Mutex<Vec<FirewallRuleInfo>>>,
 }
 
 impl Default for FirewallState {
     fn default() -> Self {
         FirewallState {
-            rules: Mutex::new(Vec::new()),
+            rules: Arc::new(Mutex::new(Vec::new())),
         }
     }
 }
 
-// Domain blocking state
+// State for managing blocked domains
 pub struct BlockedDomains {
-    pub domains: Mutex<Vec<String>>,
+    pub domains: Arc<Mutex<Vec<String>>>,
 }
 
 impl Default for BlockedDomains {
     fn default() -> Self {
         BlockedDomains {
-            domains: Mutex::new(Vec::new()),
+            domains: Arc::new(Mutex::new(Vec::new())),
         }
     }
 }
 
-// Function to run netsh commands and capture output using tauri-plugin-shell
+// Function to run netsh commands
 pub async fn run_netsh_command(app: &AppHandle, args: Vec<&str>) -> Result<String, FirewallError> {
-    // Log the command being executed for debugging
-    let full_command = format!("netsh {}", args.join(" "));
-    println!("Executing command: {}", full_command);
-    
     let output = app.shell()
         .command("netsh")
         .args(args)
         .output()
         .await
-        .map_err(|e| {
-            println!("Command execution failed: {}", e);
-            FirewallError::CommandError(format!("Failed to execute command: {}", e))
-        })?;
+        .map_err(|e| FirewallError::CommandError(e.to_string()))?;
     
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     
     if !output.status.success() {
-        println!("Command failed with exit code: {:?}", output.status.code());
-        println!("Command stdout: {}", stdout);
-        println!("Command stderr: {}", stderr);
         return Err(FirewallError::CommandError(format!("Command failed: {}", stderr)));
-    }
-    
-    println!("Command executed successfully");
-    if !stdout.trim().is_empty() {
-        println!("Command output: {}", stdout);
     }
     
     Ok(stdout)
 }
 
-// Helper function to run general shell commands (like ping) and display their output
-pub async fn run_shell_command(app: &AppHandle, command: &str, args: Vec<&str>) -> Result<String, FirewallError> {
-    // Log the command being executed for debugging
-    let full_command = format!("{} {}", command, args.join(" "));
-    println!("[SHELL] Executing command: {}", full_command);
-    
+// Function to run shell commands
+pub async fn run_shell_command(app: &AppHandle, cmd: &str, args: Vec<&str>) -> Result<String, String> {
     let output = app.shell()
-        .command(command)
+        .command(cmd)
         .args(args)
         .output()
         .await
-        .map_err(|e| {
-            println!("[SHELL] Command execution failed: {}", e);
-            FirewallError::CommandError(format!("Failed to execute command: {}", e))
-        })?;
+        .map_err(|e| format!("Command execution failed: {}", e))?;
+    
+    // Simple response processing
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        println!("[SHELL] Command exit code: {:?}", output.status.code());
+        println!("[SHELL] Command stdout: {}", stdout);
+        if !stderr.is_empty() {
+            println!("[SHELL] Command stderr: {}", stderr);
+        }
+        return Err(format!("Command failed with exit code: {:?}", output.status.code()));
+    }
+    
+    Ok(stdout)
+}
+
+// Function to run a PowerShell command as administrator with a single UAC prompt
+pub async fn run_elevated_powershell(app: &AppHandle, script: &str) -> Result<String, String> {
+    // Create a temporary PowerShell script file
+    let app_data_dir = app.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    if !app_data_dir.exists() {
+        fs::create_dir_all(&app_data_dir)
+            .map_err(|e| format!("Failed to create app data directory: {}", e))?;
+    }
+    
+    let script_path = app_data_dir.join("firewall_commands.ps1");
+    
+    // Write the script content
+    fs::write(&script_path, format!(
+        "# Firewall commands script\n{}\n\nWrite-Host \"Commands executed successfully.\"",
+        script
+    ))
+    .map_err(|e| format!("Failed to write script file: {}", e))?;
+    
+    // Command to run the script with elevation
+    let powershell_command = format!(
+        "Start-Process PowerShell -ArgumentList '-ExecutionPolicy Bypass -File \"{}\"' -Verb RunAs -Wait",
+        script_path.to_string_lossy().replace("\\", "\\\\")
+    );
+    
+    println!("Running elevated PowerShell: {}", powershell_command);
+    
+    // Run the elevation command
+    let output = app.shell()
+        .command("powershell")
+        .args(["-Command", &powershell_command])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to execute PowerShell: {}", e))?;
+    
+    // Clean up the script file
+    let _ = fs::remove_file(script_path);
+    
+    // Check execution result
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        println!("[POWERSHELL] Command exit code: {:?}", output.status.code());
+        println!("[POWERSHELL] Command stderr: {}", stderr);
+        return Err(format!("PowerShell execution failed: {}", stderr));
+    }
     
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    println!("[POWERSHELL] Command stdout: {}", stdout);
     
-    println!("[SHELL] Command exit code: {:?}", output.status.code());
-    
-    // Always show command output for debugging - both stdout and stderr
-    if !stdout.trim().is_empty() {
-        println!("[SHELL] Command stdout:\n{}", stdout);
-    }
-    
-    if !stderr.trim().is_empty() {
-        println!("[SHELL] Command stderr:\n{}", stderr);
-    }
-    
-    // Return the stdout even if the command doesn't succeed
-    // (like ping to non-existent host), we still want to see the output
     Ok(stdout)
+}
+
+// Function to check if elevated permissions are required and elevate if needed
+pub fn elevate_at_startup() {
+    // This can be expanded as needed for your application
+    println!("Checking if elevated permissions are needed...");
 }
