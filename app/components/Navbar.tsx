@@ -16,6 +16,7 @@ export default function Navbar() {
             <NavLink href="/" current={pathname === "/"}>Home</NavLink>
             <NavLink href="/firewall" current={pathname === "/firewall"}>Firewall</NavLink>
             <NavLink href="/domain-blocker" current={pathname === "/domain-blocker"}>Domain Blocker</NavLink>
+            <NavLink href="/network-traffic-analysis" current={pathname === "/network-traffic-analysis"}>Network Traffic Analysis</NavLink>
             {/* Add more navigation links here as your app grows */}
           </div>
           
