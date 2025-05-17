@@ -5,6 +5,50 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default"
+    "opener:default",
+    "process:default",
+    "shell:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "cmd-admin",
+          "cmd": "cmd",
+          "args": [
+            "/c",
+            "runas",
+            "/user:Administrator",
+            {
+              "validator": ".*"
+            }
+          ],
+          "sidecar": false
+        },
+        {
+          "name": "netsh-direct",
+          "cmd": "netsh",
+          "args": [
+            {
+              "validator": ".*"
+            }
+          ],
+          "sidecar": false
+        },
+        {
+          "name": "powershell-admin",
+          "cmd": "powershell",
+          "args": [
+            "-Command",
+            "Start-Process",
+            {
+              "validator": ".*"
+            },
+            "-Verb",
+            "RunAs"
+          ],
+          "sidecar": false
+        }
+      ]
+    }
   ]
 }

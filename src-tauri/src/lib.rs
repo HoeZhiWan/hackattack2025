@@ -13,6 +13,7 @@ use firewall::{
     block_domain,
     unblock_domain
 };
+use firewall::common::elevate_at_startup;
 
 use network_traffic_analysis::suricata::{
     is_suricata_active,
@@ -28,11 +29,8 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    /*
-    std::thread::spawn(|| {
-        network_traffic_analysis::packet_analysis::suricata::run_suricata().expect("Failed to run Suricata");
-    });
-    */
+    // We no longer need to call elevate_at_startup() here since we're using
+    // Tauri capabilities for permission management
     
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -54,8 +52,21 @@ pub fn run() {
             kill_suricata,
             read_alert_events_from_eve
         ])
-        .setup(|_app| {
-            // Prefix with underscore to indicate intentionally unused variable
+        .setup(|app| {
+            // Initialize blocked domains list from file synchronously
+            let app_handle = app.handle().clone();
+            
+            // Create runtime inside the setup function
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            
+            // Use the runtime to block on the async initialization
+            rt.block_on(async {
+                if let Err(e) = firewall::domain_blocking::initialize_blocked_domains(app_handle).await {
+                    println!("Warning: Failed to initialize blocked domains from file: {}", e);
+                    // Continue anyway, using an empty list
+                }
+            });
+            
             Ok(())
         })
         .run(tauri::generate_context!())

@@ -1,7 +1,7 @@
 // src/firewall/mod.rs - Main firewall module
 mod rules;
-mod common;
-mod domain_blocking;
+pub mod common;  // Make the module public
+pub mod domain_blocking;  // Make the module public
 
 // Re-export necessary items from submodules
 pub use rules::{get_firewall_rules, add_firewall_rule, remove_firewall_rule, enable_disable_rule};
