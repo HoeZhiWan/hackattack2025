@@ -80,7 +80,7 @@ export default function FirewallPage() {
       setError(`Failed to remove rule ${ruleName}: ${err}`);
     }
   };
-
+  
   const toggleRuleStatus = async (ruleName: string, enable: boolean) => {
     try {
       await invoke("enable_disable_rule", { ruleName, enable });
@@ -93,7 +93,16 @@ export default function FirewallPage() {
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="relative min-h-screen bg-[#FEDCC1] overflow-hidden">
+      <div
+        className="absolute inset-0 bg-center bg-cover bg-no-repeat bg-fixed opacity-50"
+        style={{
+          backgroundImage: "url('/forest.jpg')",
+          filter: "brightness(1.0) contrast(1.1)",
+        }}
+      />
+
+      <div className="container mx-auto p-4 relative z-10">
       <h1 className="text-3xl font-bold mb-6">Firewall Management</h1>
       
       {error && (
@@ -319,6 +328,13 @@ export default function FirewallPage() {
           </button>
         </div>
       </div>
+
+      <img
+        src="/fun.gif"
+        alt="Fun animation"
+        className="fixed bottom-4 right-4 w-24 h-24 z-50 rounded-lg shadow-lg"
+      />
+    </div>
     </div>
   );
 }

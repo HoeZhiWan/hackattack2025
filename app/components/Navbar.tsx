@@ -1,18 +1,27 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 export default function Navbar() {
   const pathname = usePathname();
   
   return (
-    <nav className="fixed top-0 w-full bg-white shadow-md z-10">
+    <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-sm shadow-md z-50">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className="text-xl font-bold">HackAttack</Link>
-          
-          <div className="hidden md:flex space-x-4">
+          <Link href="/">
+            <Image 
+              src="/logo.png"       // path from the public folder
+              alt="HackAttack Logo" // alt text for accessibility
+              width={164}            // adjust size as needed
+              height={164}
+              className="object-contain"
+            />
+          </Link>
+
+          <div className="hidden md:flex space-x-8">
             <NavLink href="/" current={pathname === "/"}>Home</NavLink>
             <NavLink href="/firewall" current={pathname === "/firewall"}>Firewall</NavLink>
             <NavLink href="/domain-blocker" current={pathname === "/domain-blocker"}>Domain Blocker</NavLink>
@@ -40,10 +49,10 @@ function NavLink({ href, children, current }: { href: string; children: React.Re
   return (
     <Link 
       href={href} 
-      className={`px-3 py-2 rounded-md text-sm font-medium ${
+      className={`px-4 py-2 rounded-md text-sm font-medium ${
         current 
-          ? 'bg-blue-500 text-white' 
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          ? 'bg-[#935D4B] text-white' 
+          : 'text-[#FF4E00] hover:bg-orange-100 hover:text-[#FF4E00]'
       }`}
     >
       {children}

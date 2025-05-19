@@ -36,3 +36,20 @@ export default function RootLayout({
     </html>
   );
 }
+
+// app/layout.tsx
+// import React from "react";
+// import "./globals.css"; // or your global styles
+
+// export const metadata = {
+//     title: "Your App Title",
+//     description: "App description here",
+// };
+
+// export default function RootLayout({ children }: { children: React.ReactNode }) {
+//     return (
+//         <html lang="en">
+//             <body>{children}</body>
+//         </html>
+//     );
+// }
