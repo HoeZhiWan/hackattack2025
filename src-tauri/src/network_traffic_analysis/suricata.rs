@@ -1,6 +1,6 @@
 use std::env;
 use std::fs::{OpenOptions, File};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio, Child};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -108,6 +108,7 @@ pub fn run_suricata() -> Result<(), String> {
 
     std::fs::create_dir_all(log_dir_str)
         .map_err(|e| format!("Failed to create log dir: {}", e))?;
+
     let suricata_child = start_suricata(&interface, config_path_str, log_dir_str)
         .map_err(|e| format!("Failed to start Suricata: {}", e))?;
     
@@ -152,15 +153,21 @@ pub struct AlertEvent {
 }
 
 #[tauri::command]
-pub fn read_alert_events_from_eve() -> Result<Vec<AlertEvent>, String> {
+pub fn read_alert_events() -> Result<Vec<AlertEvent>, String> {
     let mut log_dir = env::temp_dir();
     log_dir.push("suricata_logs");
-    let mut eve_path = log_dir.clone();
-    eve_path.push("eve.json");
-    let eve_path_str = eve_path.to_str().unwrap();
+    let mut alert_path = log_dir.clone();
+    alert_path.push("alert.json");
+    let alert_path_str = alert_path.to_str().unwrap();
 
-    let file = File::open(eve_path_str)
-        .map_err(|e| format!("Failed to open eve.json: {}", e))?;
+    // Create alert.json if it does not exist
+    if !std::path::Path::new(alert_path_str).exists() {
+        File::create(alert_path_str)
+            .map_err(|e| format!("Failed to create alert.json: {}", e))?;
+    }
+
+    let file = File::open(alert_path_str)
+        .map_err(|e| format!("Failed to open alert.json: {}", e))?;
     let reader = BufReader::new(file);
     let mut alerts = Vec::new();
 
@@ -185,7 +192,133 @@ pub fn read_alert_events_from_eve() -> Result<Vec<AlertEvent>, String> {
     Ok(alerts)
 }
 
+#[tauri::command]
+// delete eve.json, add all alerts to alert.json, add all flows to flow.json, and return all flow events
+pub fn extract_and_handle_events() -> Result<Vec<Value>, String> {
+    let mut log_dir = std::env::temp_dir();
+    log_dir.push("suricata_logs");
+    let mut eve_path = log_dir.clone();
+    eve_path.push("eve.json");
+    let eve_path_str = eve_path.to_str().unwrap();
+
+    let mut alert_path = log_dir.clone();
+    alert_path.push("alert.json");
+    let alert_path_str = alert_path.to_str().unwrap();
+
+    let mut flow_path = log_dir.clone();
+    flow_path.push("flow.json");
+    let flow_path_str = flow_path.to_str().unwrap();
+
+    // Create alert.json if it does not exist
+    if !std::path::Path::new(alert_path_str).exists() {
+        File::create(alert_path_str)
+            .map_err(|e| format!("Failed to create alert.json: {}", e))?;
+    }
+    // Create flow.json if it does not exist
+    if !std::path::Path::new(flow_path_str).exists() {
+        File::create(flow_path_str)
+            .map_err(|e| format!("Failed to create flow.json: {}", e))?;
+    }
+
+    let file = File::open(eve_path_str)
+        .map_err(|e| format!("Failed to open eve.json: {}", e))?;
+    let reader = BufReader::new(file);
+
+    let mut flow_events = Vec::new();
+    let mut alert_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(alert_path_str)
+        .map_err(|e| format!("Failed to open alert.json: {}", e))?;
+    let mut flow_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(flow_path_str)
+        .map_err(|e| format!("Failed to open flow.json: {}", e))?;
+
+    for line in reader.lines() {
+        let line = line.map_err(|e| format!("Failed to read line: {}", e))?;
+        if let Ok(json) = serde_json::from_str::<Value>(&line) {
+            match json.get("event_type").and_then(|v| v.as_str()) {
+                Some("alert") => {
+                    writeln!(alert_file, "{}", line).map_err(|e| format!("Failed to write: {}", e))?;
+                }
+                Some("flow") => {
+                    writeln!(flow_file, "{}", line).map_err(|e| format!("Failed to write: {}", e))?;
+                    flow_events.push(json);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    // Truncate eve.json to delete all contents
+    OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(eve_path_str)
+        .map_err(|e| format!("Failed to truncate eve.json: {}", e))?;
+
+    Ok(flow_events)
+}
+
+//read flow event for machine learning purposes
+pub fn read_flow_events() -> Result<Vec<FlowEvent>, String> {
+    // Always use the same temp location as extract_and_handle_events
+    let mut log_dir = std::env::temp_dir();
+    log_dir.push("suricata_logs");
+    let mut flow_path = log_dir.clone();
+    flow_path.push("flow.json");
+    let flow_path_str = flow_path.to_str().unwrap();
+
+    let file = File::open(flow_path_str)
+        .map_err(|e| format!("Failed to open {}: {}", flow_path_str, e))?;
+    let reader = BufReader::new(file);
+    let mut flow_events = Vec::new();
+
+    for line in reader.lines() {
+        let line = line.map_err(|e| format!("Failed to read line: {}", e))?;
+        if let Ok(json) = serde_json::from_str::<Value>(&line) {
+            // Defensive: Only process flow events
+            if json.get("event_type").and_then(|v| v.as_str()) == Some("flow") {
+                let flow = json.get("flow").unwrap_or(&Value::Null);
+                let flow_event = FlowEvent {
+                    sourceip: json.get("src_ip").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    destinationip: json.get("dest_ip").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    sourceport: json.get("src_port").and_then(|v| v.as_u64()).unwrap_or(0) as u16,
+                    destinationport: json.get("dest_port").and_then(|v| v.as_u64()).unwrap_or(0) as u16,
+                    protocol: json.get("proto").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    bytes_in: flow.get("bytes_toserver").and_then(|v| v.as_u64()).unwrap_or(0),
+                    bytes_out: flow.get("bytes_toclient").and_then(|v| v.as_u64()).unwrap_or(0),
+                    packets_in: flow.get("pkts_toserver").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                    packets_out: flow.get("pkts_toclient").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                    start_time: flow.get("start").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    end_time: flow.get("end").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                };
+                flow_events.push(flow_event);
+            }
+        }
+    }
+
+    Ok(flow_events)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FlowEvent {
+    pub sourceip: String,
+    pub destinationip: String,
+    pub sourceport: u16,
+    pub destinationport: u16,
+    pub protocol: String,
+    pub bytes_in: u64,
+    pub bytes_out: u64,
+    pub packets_in: u32,
+    pub packets_out: u32,
+    pub start_time: String,
+    pub end_time: String,
+}
+
 // Note to self: directory might not work on other os / on deployment
 // the home network address is not dynamic, (set to 192.168.0.0/24)
 // tbh there should be a way to change configurations but it seems to take alot of time
-/* suricata -c "C:\Users\Yi Loon\OneDrive\Documents\GitHub\Heart_Attack\hackattack2025\src-tauri\src\network_traffic_analysis\packet_analysis\suricata.yaml" -i "\Device\NPF_{493F5479-E7C9-4330-A2F8-4C64C439CB71}" -l "C:\Users\Yi Loon\OneDrive\Documents\TestLogs" */
+// file dir: C:\Users\username\AppData\Local\Temp\suricata_logs\

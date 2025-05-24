@@ -22,7 +22,8 @@ use network_traffic_analysis::suricata::{
     is_suricata_active,
     run_suricata,
     kill_suricata,
-    read_alert_events_from_eve
+    read_alert_events,
+    extract_and_handle_events
 };
 
 #[tauri::command]
@@ -78,7 +79,8 @@ pub fn run() {
             is_suricata_active,
             run_suricata,
             kill_suricata,
-            read_alert_events_from_eve,
+            read_alert_events,
+            extract_and_handle_events,
             show_domain_blocked_notification
         ]).setup(|app| {
             // Initialize blocked domains list from file synchronously
