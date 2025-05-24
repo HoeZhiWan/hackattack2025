@@ -1,6 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod network_traffic_analysis;
 mod firewall;
+mod tray;
 
 use firewall::{
     FirewallState, 
@@ -13,7 +14,9 @@ use firewall::{
     block_domain,
     unblock_domain
 };
-use firewall::common::elevate_at_startup;
+use tauri::{
+    AppHandle, Manager
+};
 
 use network_traffic_analysis::suricata::{
     is_suricata_active,
@@ -36,6 +39,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(FirewallState::default())
         .manage(BlockedDomains::default())
         .invoke_handler(tauri::generate_handler![
@@ -61,11 +65,14 @@ pub fn run() {
             
             // Use the runtime to block on the async initialization
             rt.block_on(async {
-                if let Err(e) = firewall::domain_blocking::initialize_blocked_domains(app_handle).await {
+                if let Err(e) = firewall::domain_blocking::initialize_blocked_domains(app_handle.clone()).await {
                     println!("Warning: Failed to initialize blocked domains from file: {}", e);
                     // Continue anyway, using an empty list
-                }
-            });
+                }            });
+            
+            // Set up the system tray
+            let app_handle = app.handle();
+            tray::create_tray(app_handle)?;
             
             Ok(())
         })

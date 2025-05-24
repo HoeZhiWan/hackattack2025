@@ -9,17 +9,25 @@
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../out"
   },
-  "app": {
+  "app": {    
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true
+    },
     "windows": [
       {
         "title": "hackattack",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "visible": true,
+        "center": true,
+        "skipTaskbar": false
       }
     ],
     "security": {
       "csp": null
-    }
+    },
+    "withGlobalTauri": true
   },
   
   "bundle": {
