@@ -1,7 +1,7 @@
 // firewall/domain_blocking/mod.rs - Module file for domain blocking functionality
-mod utils;
+pub mod utils;
 
-use tauri::{AppHandle, State, Manager};
+use tauri::{AppHandle, State, Manager, Emitter};
 use tauri_plugin_shell::ShellExt;
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -211,9 +211,7 @@ pub async fn block_domain(
     ps_script.push_str("}\n");
     
     log_debug(&format!("Executing PowerShell script with {} firewall rules", rule_count));
-    log_debug(&format!("PowerShell script:\n{}", ps_script));
-    
-    // Execute all commands in a single elevated PowerShell session
+    log_debug(&format!("PowerShell script:\n{}", ps_script));    // Execute all commands in a single elevated PowerShell session
     match run_elevated_powershell(&app, &ps_script).await {
         Ok(_) => {
             log_debug(&format!("Successfully created {} firewall rules for domain: {}", rule_count, domain));
@@ -235,9 +233,14 @@ pub async fn block_domain(
                 log_debug(&format!("Failed to save domains to file: {}", e));
                 // Continue anyway - the domain is blocked but not persisted
             }
-            
-            log_debug(&format!("Domain blocking completed. Created {} firewall rules for domain {}", 
+              log_debug(&format!("Domain blocking completed. Created {} firewall rules for domain {}", 
                           rule_count, domain));
+            
+            // Show notification to user that domain was blocked
+            log_debug(&format!("Triggering notification for blocked domain: {}", domain));
+            if let Err(e) = app.emit("domain-blocked-notification", &domain) {
+                log_debug(&format!("Failed to emit domain blocked event: {}", e));
+            }
             
             Ok(())
         },
