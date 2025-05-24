@@ -53,17 +53,20 @@ pub async fn ask_ai(prompt: String) -> Result<String, String> {
     };
 
     let res = client
-        .post("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent")
+        .post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent")
         .query(&[("key", api_key)])
         .json(&request)
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
+    println!("HTTP Status: {}", res.status());
+    
     let json: GeminiResponse = res.json().await.map_err(|e| e.to_string())?;
-
-    if let Some(first) = json.candidates.first() {
+    
+    return if let Some(first) = json.candidates.first() {
         if let Some(part) = first.content.parts.first() {
+            
             Ok(part.text.clone())
         } else {
             Err("No content returned".into())
@@ -71,5 +74,6 @@ pub async fn ask_ai(prompt: String) -> Result<String, String> {
     } else {
         Err("No candidates returned".into())
     }
+    
 }
 

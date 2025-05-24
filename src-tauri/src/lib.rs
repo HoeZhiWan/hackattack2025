@@ -2,6 +2,7 @@
 mod network_traffic_analysis;
 mod firewall;
 mod tray;
+mod assistant;
 
 use firewall::{
     FirewallState, 
@@ -24,6 +25,11 @@ use network_traffic_analysis::suricata::{
     kill_suricata,
     read_alert_events_from_eve
 };
+
+use assistant::{
+    ask_ai
+};
+
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -54,7 +60,8 @@ pub fn run() {
             is_suricata_active,
             run_suricata,
             kill_suricata,
-            read_alert_events_from_eve
+            read_alert_events_from_eve,
+            ask_ai
         ])
         .setup(|app| {
             // Initialize blocked domains list from file synchronously
