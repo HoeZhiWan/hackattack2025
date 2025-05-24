@@ -15,7 +15,6 @@ use firewall::{
     unblock_domain
 };
 use tauri::{
-    Manager,
     AppHandle
 };
 

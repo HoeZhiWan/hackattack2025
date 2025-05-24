@@ -1,5 +1,5 @@
 // firewall/domain_blocking/mod.rs - Module file for domain blocking functionality
-mod utils;
+pub mod utils;
 
 use tauri::{AppHandle, State, Manager, Emitter};
 use tauri_plugin_shell::ShellExt;
