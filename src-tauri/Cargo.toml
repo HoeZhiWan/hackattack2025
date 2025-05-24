@@ -33,4 +33,5 @@ regex = "1.5"
 pnet = "0.35.0"
 socket2 = "0.5"
 sysinfo = "0.30"
+once_cell = "1.19.0"
 

@@ -15,7 +15,7 @@ use firewall::{
     unblock_domain
 };
 use tauri::{
-    AppHandle, Manager
+    Manager
 };
 
 use network_traffic_analysis::suricata::{
@@ -55,8 +55,7 @@ pub fn run() {
             run_suricata,
             kill_suricata,
             read_alert_events_from_eve
-        ])
-        .setup(|app| {
+        ])        .setup(|app| {
             // Initialize blocked domains list from file synchronously
             let app_handle = app.handle().clone();
             
@@ -68,10 +67,11 @@ pub fn run() {
                 if let Err(e) = firewall::domain_blocking::initialize_blocked_domains(app_handle.clone()).await {
                     println!("Warning: Failed to initialize blocked domains from file: {}", e);
                     // Continue anyway, using an empty list
-                }            });
-            
-            // Set up the system tray
+                }            
+            });              // Set up the system tray
             let app_handle = app.handle();
+            // Clean up any existing tray first
+            tray::cleanup_tray();
             tray::create_tray(app_handle)?;
             
             Ok(())
