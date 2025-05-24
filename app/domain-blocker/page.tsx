@@ -27,12 +27,17 @@ export default function DomainBlockerPage() {
       setLoading(false);
     }
   };
-
   const addBlockedDomain = async () => {
     if (!newDomain.trim()) return;
     
     try {
       await invoke("block_domain", { domain: newDomain });
+      
+      // Show notification for successful domain blocking
+      await invoke("show_domain_blocked_notification", { 
+        domain: newDomain 
+      });
+      
       // Clear the input
       setNewDomain("");
       // Refresh the list

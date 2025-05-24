@@ -27,15 +27,11 @@ pub fn create_tray(app_handle: &AppHandle) -> Result<(), Box<dyn std::error::Err
         return Ok(());
     }
     
-    println!("Creating new tray icon");
-    
-    // Create the menu items (show/hide app and quit)
+    println!("Creating new tray icon");    // Create the menu items (show/hide app and quit)
     let show_app = tauri::menu::MenuItem::with_id(app_handle, "show", "Show App", true, None::<&str>)?;
     let hide_app = tauri::menu::MenuItem::with_id(app_handle, "hide", "Hide to Tray", true, None::<&str>)?;
     let separator = tauri::menu::PredefinedMenuItem::separator(app_handle)?;
-    let quit = tauri::menu::MenuItem::with_id(app_handle, "quit", "Quit", true, None::<&str>)?;
-    
-    // Create a simple menu
+    let quit = tauri::menu::MenuItem::with_id(app_handle, "quit", "Quit", true, None::<&str>)?;    // Create a simple menu
     let menu = tauri::menu::Menu::with_items(app_handle, &[
         &show_app,
         &hide_app,
@@ -48,8 +44,7 @@ pub fn create_tray(app_handle: &AppHandle) -> Result<(), Box<dyn std::error::Err
     let tray = TrayIconBuilder::new()
         .icon(app_handle.default_window_icon().unwrap().clone())
         .menu(&menu)
-        .tooltip("HackAttack")
-        .on_menu_event(move |app_handle, event| {
+        .tooltip("HackAttack")        .on_menu_event(move |app_handle, event| {
             match event.id.as_ref() {
                 "show" => {
                     if let Some(window) = app_handle.get_webview_window("main") {

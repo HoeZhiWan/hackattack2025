@@ -2,24 +2,54 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [adminClicks, setAdminClicks] = useState(0);
+  
+  const handleLogoClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    // Count clicks for admin menu
+    const newClickCount = adminClicks + 1;
+    setAdminClicks(newClickCount);
+    
+    // Reset click count after 3 seconds
+    setTimeout(() => setAdminClicks(0), 3000);
+    
+    // Navigate to admin page after 3 clicks
+    if (newClickCount >= 3) {
+      router.push('/admin');
+      setAdminClicks(0); // Reset after triggering
+    } else if (newClickCount === 1) {
+      // For single click, go to home normally
+      router.push('/');
+    }
+    // For 2 clicks, just wait for the potential third click
+  };
   
   return (
     <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-sm shadow-md z-50">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          <Link href="/">
+        <div className="flex justify-between items-center h-16">          <div className="relative">
             <Image 
               src="/logo.png"       // path from the public folder
               alt="HackAttack Logo" // alt text for accessibility
               width={164}            // adjust size as needed
               height={164}
-              className="object-contain"
+              className="object-contain cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={handleLogoClick}
+              title={`Admin menu: ${adminClicks}/3 clicks`}
             />
-          </Link>
+            {adminClicks > 0 && (
+              <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
+                {adminClicks}
+              </div>
+            )}
+          </div>
 
           <div className="hidden md:flex space-x-8">
             <NavLink href="/" current={pathname === "/"}>Home</NavLink>
