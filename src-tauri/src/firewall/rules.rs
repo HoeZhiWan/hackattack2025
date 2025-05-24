@@ -233,3 +233,4 @@ pub async fn enable_disable_rule(
         }
     }
 }
+

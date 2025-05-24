@@ -1,3 +1,4 @@
+import ChatAssistant from "./components/ChatAssistant";
 import SecurityDashboard from "./components/SecurityDashboard";
 
 export default function Page() {
@@ -11,6 +12,8 @@ export default function Page() {
           filter: "brightness(1.0) contrast(1.1)",
         }}
       />
+
+      
 
       <div className="max-w-5xl mx-auto bg-[#ffeede] p-6 sm:p-8 rounded-xl shadow-md flex flex-col md:flex-row items-center gap-6 relative mt-8">
         <img
@@ -59,6 +62,9 @@ export default function Page() {
       />
 
       <SecurityDashboard />
+      <ChatAssistant />
     </div>
+
+    
   );
 }
