@@ -90,21 +90,28 @@ const SecurityDashboard = () => {
           alignItems: "center",
         }}
       >
-        <NetworkIntrusionCard title="Detection Status" value="Active" icon="!" infoColor="#b43c3c" />
-        <NetworkIntrusionCard title="Critical Alerts" value="2" info="+ 2 detected" icon="!" infoColor="#217f2b" />
+        <div style={{ display: "flex", flex: 1, gap: 22 }}>
+          <NetworkIntrusionCard title="Detection Status" value="Active" icon="!" infoColor="#b43c3c" />
+          <NetworkIntrusionCard title="Critical Alerts" value="2" info="+ 2 detected" icon="!" infoColor="#217f2b" />
+        </div>
+
         <Button
           color={isPassive ? "#777" : "#4CAF50"}
           style={{
             height: 36,
-            marginLeft: "auto",
             fontWeight: "600",
-            transition: "background-color 0.3s ease",
+            marginLeft: "auto",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+            width: 120, // fixed width
+            textAlign: "center", // center the label
           }}
           onClick={toggleStatus}
         >
           {isPassive ? "Set Passive" : "Set Active"}
         </Button>
       </div>
+
 
       <h3 style={{ color: "#000", marginBottom: 16 }}>Recent Activity</h3>
       <div

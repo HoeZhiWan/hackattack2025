@@ -46,7 +46,14 @@ const SecurityDashboardCard: React.FC<SecurityDashboardCardProps> = ({
     infoColor,
     infoIcon,
 }) => (
-    <div style={{ ...cardStyles.card, backgroundColor: bgColor }}>
+    <div
+        style={{
+            ...cardStyles.card,
+            backgroundColor: "#fff", // white background
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)", // subtle shadow
+            flex: "1 1 220px", // helps cards be equal width
+        }}
+    >
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>{title}</div>
         <div style={{ fontSize: 24, fontWeight: "bold", marginBottom: 6 }}>{value}</div>
         <div style={{ fontSize: 12, color: infoColor }}>{info}</div>
