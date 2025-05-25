@@ -34,12 +34,12 @@ export default function Navbar() {
     <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-sm shadow-md z-50">
       <div className="flex justify-between items-center h-14 sm:h-16 px-4 sm:px-6 lg:px-8">
           {/* Logo - Always on the left */}
-          <div className="relative flex-shrink-0">            <Image 
-              src="/logo.png"       // path from the public folder
+          <div className="relative flex">            <Image 
+              src="/logo1.png"       // path from the public folder
               alt="HackAttack Logo" // alt text for accessibility
-              width={140}            // adjusted for better mobile responsiveness
-              height={140}
-              className="object-contain cursor-pointer hover:opacity-80 transition-opacity w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36"
+              width={300}            // adjusted for better mobile responsiveness
+              height={200}
+              className="object-contain cursor-pointer hover:opacity-80 transition-opacity w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56"
               onClick={handleLogoClick}
               title={`Admin menu: ${adminClicks}/3 clicks`}
             />

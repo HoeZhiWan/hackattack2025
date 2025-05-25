@@ -28,19 +28,28 @@ export default function Page() {
 
       {/* Card container */}
       <div className="max-w-6xl mx-auto mt-14 px-6 md:px-12 py-10 rounded-3xl bg-white/30 backdrop-blur-2xl shadow-2xl ring-1 ring-white/20 relative z-10 flex flex-col md:flex-row gap-10 items-center border border-white/20">
+        {/* Profile Icon in corner */}
+        <div className="absolute top-100 right-100 md:top-12 md:right-12 bg-white/70 p-2 rounded-full shadow-md backdrop-blur-md">
+          <img
+            src="/profileIcon1.png" // Replace with your actual profile icon path
+            alt="Profile"
+            className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
+          />
+        </div>
+
         {/* Left: Image */}
         <div className="w-full md:w-1/3">
           <img
             src="/homePicture.png"
             alt="Security Status"
-            className="w-full rounded-2xl object-contain shadow-lg border border-white/30"
+            className="w-full rounded-2xl object-contain shadow-xl border border-[#2D0E30]"
           />
         </div>
 
         {/* Right: Content */}
         <div className="w-full md:w-2/3 flex flex-col gap-6">
           <div>
-            <p className="text-black/80 text-base">Hello, your system so far is</p>
+            <p className="text-black/80 text-base">Greetings! Your system's status is</p>
             <div className="flex items-center gap-2 mt-1">
               <CheckCircle className="text-green-400 w-6 h-6" />
               <h2 className="text-4xl font-extrabold text-green tracking-tight">Optimal</h2>
@@ -70,7 +79,7 @@ export default function Page() {
             </button>
             <button
               onClick={() => setShowAssistant(true)}
-              className="bg-white/10 hover:bg-white/20 border border-white/30 text-white font-semibold px-6 py-2 rounded-xl shadow-md backdrop-blur-lg transition-transform transform hover:scale-105"
+              className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold px-6 py-2 rounded-xl shadow-md backdrop-blur-lg transition-transform transform hover:scale-105"
             >
               Open AI Assistant
             </button>
@@ -82,7 +91,10 @@ export default function Page() {
       <ChatAssistant isOpen={showAssistant} onClose={() => setShowAssistant(false)} />
 
       {/* Security Dashboard */}
-      <SecurityDashboard />
+      <div className="mt-10">
+        <SecurityDashboard />
+      </div>
+
 
       {/* Floating Fun GIF */}
       <img
