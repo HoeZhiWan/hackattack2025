@@ -84,8 +84,8 @@ pub fn run() {
             is_suricata_active,
             run_suricata,
             kill_suricata,
-            read_alert_events_from_eve,,
-            ask_ai
+            read_alert_events_from_eve,
+            ask_ai,
             show_domain_blocked_notification
         ]).setup(|app| {
             // Initialize blocked domains list from file synchronously
