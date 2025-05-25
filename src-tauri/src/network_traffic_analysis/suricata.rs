@@ -10,6 +10,7 @@ use pnet::datalink;
 use socket2::{Socket, Domain, Type, Protocol};
 use std::net::SocketAddr;
 use sysinfo::System;
+use crate::network_traffic_analysis::report::{generate_flow_report};
 
 fn start_suricata(interface: &str, config_path: &str, log_dir: &str) -> std::io::Result<Child> {
     Command::new("suricata")
@@ -19,29 +20,6 @@ fn start_suricata(interface: &str, config_path: &str, log_dir: &str) -> std::io:
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-}
-
-/// Reads Suricata's eve.json output in real time and processes each event.
-fn process_suricata_events<F>(eve_path: &str, mut callback: F) -> std::io::Result<()>
-where
-    F: FnMut(&Value),
-{
-    // Wait for the file to be created
-    while !std::path::Path::new(eve_path).exists() {
-        thread::sleep(Duration::from_secs(1));
-    }
-    let file = OpenOptions::new().read(true).open(eve_path)?;
-    let reader = BufReader::new(file);
-
-    for line in reader.lines() {
-        let line = line?;
-        if let Ok(json) = serde_json::from_str::<Value>(&line) {
-            // Process the Suricata event here
-            println!("Processing event: {}", line);
-            callback(&json);
-        }
-    }
-    Ok(())
 }
 
 fn pick_internet_interface() -> Option<String> {
@@ -193,8 +171,8 @@ pub fn read_alert_events() -> Result<Vec<AlertEvent>, String> {
 }
 
 #[tauri::command]
-// delete eve.json, add all alerts to alert.json, add all flows to flow.json, and return all flow events
-pub fn extract_and_handle_events() -> Result<Vec<Value>, String> {
+// delete eve.json, add all alerts to alert.json, add all flows to flow.json, and generate flow report
+pub fn extract_and_handle_events() -> Result<(), String> {
     let mut log_dir = std::env::temp_dir();
     log_dir.push("suricata_logs");
     let mut eve_path = log_dir.clone();
@@ -224,7 +202,6 @@ pub fn extract_and_handle_events() -> Result<Vec<Value>, String> {
         .map_err(|e| format!("Failed to open eve.json: {}", e))?;
     let reader = BufReader::new(file);
 
-    let mut flow_events = Vec::new();
     let mut alert_file = OpenOptions::new()
         .create(true)
         .append(true)
@@ -245,7 +222,6 @@ pub fn extract_and_handle_events() -> Result<Vec<Value>, String> {
                 }
                 Some("flow") => {
                     writeln!(flow_file, "{}", line).map_err(|e| format!("Failed to write: {}", e))?;
-                    flow_events.push(json);
                 }
                 _ => {}
             }
@@ -259,7 +235,7 @@ pub fn extract_and_handle_events() -> Result<Vec<Value>, String> {
         .open(eve_path_str)
         .map_err(|e| format!("Failed to truncate eve.json: {}", e))?;
 
-    Ok(flow_events)
+    Ok(())
 }
 
 //read flow event for machine learning purposes

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useRouter } from "next/navigation";
 
 type AlertEvent = {
   timestamp: string;
@@ -20,6 +21,8 @@ export default function NetworkTrafficAnalysisPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = useState<number | null>(null);
+
+  const router = useRouter();
 
   const refreshStatusAndAlerts = async () => {
     setLoading(true);
@@ -115,6 +118,16 @@ export default function NetworkTrafficAnalysisPage() {
       {/* Main content container */}
       <div className="container mx-auto p-4 relative z-10">
         <h1 className="text-3xl font-bold mb-6">Network Traffic Analysis</h1>
+
+        {/* Add navigation button here */}
+        <div className="mb-6">
+          <button
+            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+            onClick={() => router.push("/network-report")}
+          >
+            📊 View Network Flow Report
+          </button>
+        </div>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
