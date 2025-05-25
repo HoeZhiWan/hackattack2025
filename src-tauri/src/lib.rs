@@ -27,6 +27,11 @@ use network_traffic_analysis::suricata::{
     extract_and_handle_events
 };
 
+use network_traffic_analysis::report::{
+    read_flow_report,
+    generate_flow_report,
+};
+
 use assistant::{
     ask_ai
 };
@@ -88,7 +93,9 @@ pub fn run() {
             read_alert_events,
             extract_and_handle_events,
             ask_ai,
-            show_domain_blocked_notification
+            show_domain_blocked_notification,
+            read_flow_report,
+            generate_flow_report
         ]).setup(|app| {
             // Initialize blocked domains list from file synchronously
             let app_handle = app.handle().clone();
