@@ -23,7 +23,8 @@ use network_traffic_analysis::suricata::{
     is_suricata_active,
     run_suricata,
     kill_suricata,
-    read_alert_events_from_eve
+    read_alert_events,
+    extract_and_handle_events
 };
 
 use assistant::{
@@ -84,7 +85,8 @@ pub fn run() {
             is_suricata_active,
             run_suricata,
             kill_suricata,
-            read_alert_events_from_eve,
+            read_alert_events,
+            extract_and_handle_events,
             ask_ai,
             show_domain_blocked_notification
         ]).setup(|app| {

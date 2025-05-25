@@ -19,6 +19,7 @@ export default function NetworkTrafficAnalysisPage() {
   const [alerts, setAlerts] = useState<AlertEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [severityFilter, setSeverityFilter] = useState<number | null>(null);
 
   const refreshStatusAndAlerts = async () => {
     setLoading(true);
@@ -27,11 +28,10 @@ export default function NetworkTrafficAnalysisPage() {
       setIsActive(active);
 
       if (active) {
-        const alertList = await invoke<AlertEvent[]>("read_alert_events_from_eve");
-        setAlerts(alertList);
-      } else {
-        setAlerts([]);
+        await invoke("extract_and_handle_events");
       }
+      const alertList = await invoke<AlertEvent[]>("read_alert_events");
+      setAlerts(alertList);
       setError(null);
     } catch (err) {
       setError(`Failed to fetch status or alerts: ${err}`);
@@ -67,6 +67,39 @@ export default function NetworkTrafficAnalysisPage() {
       setLoading(false);
     }
   };
+
+  // Sort alerts by timestamp descending (most recent first)
+  const sortedAlerts = [...alerts].sort((a, b) => {
+    // Fallback to "" if timestamp is missing
+    return (b.timestamp || "").localeCompare(a.timestamp || "");
+  });
+
+  // Filter by severity if selected
+  const filteredAlerts =
+    severityFilter === null
+      ? sortedAlerts
+      : sortedAlerts.filter((alert) => alert.severity === severityFilter);
+
+  // Helper to format ISO timestamp to "YYYY-MM-DD HH:mm:ss"
+  function formatTimestamp(ts?: string) {
+    if (!ts) return "";
+    const date = new Date(ts);
+    if (isNaN(date.getTime())) return ts;
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return (
+      date.getFullYear() +
+      "-" +
+      pad(date.getMonth() + 1) +
+      "-" +
+      pad(date.getDate()) +
+      " " +
+      pad(date.getHours()) +
+      ":" +
+      pad(date.getMinutes()) +
+      ":" +
+      pad(date.getSeconds())
+    );
+  }
 
   return (
     <div className="relative min-h-screen bg-[#FEDCC1] overflow-hidden">
@@ -123,12 +156,28 @@ export default function NetworkTrafficAnalysisPage() {
         </div>
 
         <div className="bg-white shadow-md rounded px-8 pt-6 pb-8">
-          <h2 className="text-xl font-semibold mb-4">Alerts</h2>
+          <div className="flex items-center mb-4 gap-4">
+            <h2 className="text-xl font-semibold">Alerts</h2>
+            <label className="flex items-center gap-2">
+              <span>Severity:</span>
+              <select
+                className="border rounded px-2 py-1"
+                value={severityFilter === null ? "" : severityFilter}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSeverityFilter(val === "" ? null : Number(val));
+                }}
+              >
+                <option value="">All</option>
+                <option value="1">1 (High)</option>
+                <option value="2">2 (Medium)</option>
+                <option value="3">3 (Low)</option>
+              </select>
+            </label>
+          </div>
           {loading ? (
             <p>Loading...</p>
-          ) : !isActive ? (
-            <p>Suricata is not running.</p>
-          ) : alerts.length === 0 ? (
+          ) : filteredAlerts.length === 0 ? (
             <p>No alerts found.</p>
           ) : (
             <div className="overflow-x-auto">
@@ -144,9 +193,9 @@ export default function NetworkTrafficAnalysisPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {alerts.map((alert, idx) => (
+                  {filteredAlerts.map((alert, idx) => (
                     <tr key={idx}>
-                      <td className="px-2 py-1 border">{alert.timestamp}</td>
+                      <td className="px-2 py-1 border">{formatTimestamp(alert.timestamp)}</td>
                       <td className="px-2 py-1 border">
                         {alert.src_ip}
                         {alert.src_port ? `:${alert.src_port}` : ""}
@@ -157,7 +206,15 @@ export default function NetworkTrafficAnalysisPage() {
                       </td>
                       <td className="px-2 py-1 border">{alert.signature}</td>
                       <td className="px-2 py-1 border">{alert.category}</td>
-                      <td className="px-2 py-1 border">{alert.severity}</td>
+                      <td className="px-2 py-1 border">
+                        {alert.severity === 1
+                          ? "High"
+                          : alert.severity === 2
+                          ? "Medium"
+                          : alert.severity === 3
+                          ? "Low"
+                          : alert.severity}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
