@@ -42,4 +42,4 @@ This template should help get you started developing with Tauri, React and Types
     - After installation, Npcap will be ready for Suricata to use for live network capture.
     - Ensure that the wpcap.lib and Packet.lib files exist in the `C:\Program Files\Npcap\Lib` directory.
     - if wpcap.lib and Packet.lib does not exists, install Npcap SDK 1.15 (zip) from the offical Npcap website.
-    - Extract the contents into a folder, then copy both of the `.lib` files to the npcap directory `C:\Program Files\Npcap\`.
+    - Extract the contents into a folder, then copy all of the contents to the npcap directory `C:\Program Files\Npcap\Lib`.

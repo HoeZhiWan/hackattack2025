@@ -202,7 +202,7 @@ outputs:
             # By default, anomaly logging is enabled. When anomaly
             # logging is enabled, applayer anomaly reporting is
             # also enabled.
-            enabled: yes
+            enabled: no
             #
             # Choose one or more types of anomaly logging and whether to enable
             # logging of the packet header for packet anomalies.
@@ -324,7 +324,8 @@ outputs:
             threads: no       # per thread stats
             deltas: no        # include delta values
         # bi-directional flows
-        #- flow
+        - flow:
+            enabled: yes
         # uni-directional flows
         #- netflow
 
@@ -447,7 +448,7 @@ outputs:
 
   # Stats.log contains data from various counters of the Suricata engine.
   - stats:
-      enabled: yes
+      enabled: no
       filename: stats.log
       append: no       # append to file (yes) or overwrite it (no)
       totals: yes       # stats for all threads merged together
