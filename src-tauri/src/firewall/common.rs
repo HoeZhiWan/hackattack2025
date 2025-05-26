@@ -160,19 +160,17 @@ pub async fn run_elevated_powershell(app: &AppHandle, script: &str) -> Result<St
         script
     ))
     .map_err(|e| format!("Failed to write script file: {}", e))?;
-    
-    // Command to run the script with elevation
+      // Command to run the script with elevation and hidden window
     let powershell_command = format!(
-        "Start-Process PowerShell -ArgumentList '-ExecutionPolicy Bypass -File \"{}\"' -Verb RunAs -Wait",
+        "Start-Process PowerShell -ArgumentList '-ExecutionPolicy Bypass -WindowStyle Hidden -File \"{}\"' -Verb RunAs -Wait -WindowStyle Hidden",
         script_path.to_string_lossy().replace("\\", "\\\\")
     );
     
     println!("Running elevated PowerShell: {}", powershell_command);
-    
-    // Run the elevation command
+      // Run the elevation command with hidden window
     let output = app.shell()
         .command("powershell")
-        .args(["-Command", &powershell_command])
+        .args(["-WindowStyle", "Hidden", "-Command", &powershell_command])
         .output()
         .await
         .map_err(|e| format!("Failed to execute PowerShell: {}", e))?;
