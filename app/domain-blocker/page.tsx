@@ -8,6 +8,7 @@ export default function DomainBlockerPage() {
   const [newDomain, setNewDomain] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [autoBlockingEnabled, setAutoBlockingEnabled] = useState(false);
 
   // Fetch blocked domains on component mount
   useEffect(() => {
@@ -64,6 +65,11 @@ export default function DomainBlockerPage() {
       addBlockedDomain();
     }
   };
+  const toggleAutoBlocking = () => {
+    setAutoBlockingEnabled(!autoBlockingEnabled);
+    // This is a demo toggle - no actual AI functionality is implemented yet
+    console.log(`Auto-blocking demo ${!autoBlockingEnabled ? 'enabled' : 'disabled'} - UI only`);
+  };
 
   return (
     <div className="relative min-h-screen bg-[#FEDCC1] overflow-hidden">
@@ -113,6 +119,46 @@ export default function DomainBlockerPage() {
         <p className="text-sm text-gray-600 mt-2">
           Note: Blocking a domain prevents your computer from connecting to it.
         </p>
+      </div>        {/* AI Auto-blocking Toggle */}
+      <div className="bg-white shadow-md rounded-lg px-6 py-4 mb-6 border border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg mr-3">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-800">AI-Powered Auto Blocking</h2>
+              <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">
+                🧪 Function Not Implemented
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <span className={`text-xs font-medium ${autoBlockingEnabled ? 'text-green-600' : 'text-gray-500'}`}>
+              {autoBlockingEnabled ? 'ACTIVE' : 'INACTIVE'}
+            </span>
+            <button
+              onClick={toggleAutoBlocking}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                autoBlockingEnabled ? 'bg-green-600' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  autoBlockingEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>        </div>
+        
+        {autoBlockingEnabled && (
+          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+            <strong>Demo Active:</strong> AI monitoring simulation enabled 
+          </div>
+        )}
       </div>
       
       {/* Blocked Domains List */}
