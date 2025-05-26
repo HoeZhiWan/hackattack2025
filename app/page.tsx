@@ -70,12 +70,18 @@ export default function Page() {
                 <span className="font-semibold">Optimal</span>
               </div>
             </div>
-          </div>
-
+          </div>            
           {/* Buttons */}
           <div className="flex flex-wrap gap-4 mt-2">
-            <button className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold px-6 py-2 rounded-xl shadow-md transition-transform transform hover:scale-105">
-              Generate Full Report
+            <button 
+              className="relative bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-gray-400 hover:to-gray-500 text-white font-semibold px-6 py-2 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 group cursor-not-allowed"
+              disabled
+              title="Feature coming soon"
+            >
+              <span className="group-hover:opacity-50">Generate Full Report</span>
+              <div className="absolute inset-0 bg-black/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <span className="text-xs text-white/90 font-medium">Coming Soon</span>
+              </div>
             </button>
             <button
               onClick={() => setShowAssistant(true)}

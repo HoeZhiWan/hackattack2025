@@ -15,6 +15,14 @@ use firewall::{
     block_domain,
     unblock_domain
 };
+
+use firewall::common::{NotificationState, NotificationSettings};
+
+use firewall::domain_blocking::monitor::{
+    start_domain_access_monitor,
+    stop_domain_access_monitor,
+    is_domain_access_monitor_active
+};
 use tauri::{
     AppHandle
 };
@@ -65,8 +73,29 @@ async fn send_notification(title: String, message: String, app: AppHandle) -> Re
 
 // Domain blocking notification system
 #[tauri::command]
-async fn show_domain_blocked_notification(domain: String, app: AppHandle) -> Result<(), String> {
+async fn show_domain_blocked_notification(
+    domain: String, 
+    app: AppHandle,
+    state: tauri::State<'_, NotificationState>
+) -> Result<(), String> {
     use tauri_plugin_notification::NotificationExt;
+    use tokio::time::{sleep, Duration};
+    
+    // Get notification settings
+    let delay_seconds = {
+        let settings = state.settings.lock().unwrap();
+        if !settings.enabled {
+            println!("Notifications are disabled, skipping notification for domain: {}", domain);
+            return Ok(());
+        }
+        settings.domain_blocked_delay_seconds
+    };
+    
+    // Add delay before showing notification
+    if delay_seconds > 0 {
+        println!("Waiting {} seconds before showing notification for domain: {}", delay_seconds, domain);
+        sleep(Duration::from_secs(delay_seconds)).await;
+    }
     
     let title = "🚫 Domain Blocked";
     let body = format!("Domain {} has been blocked by HackAttack. Click to learn more.", domain);
@@ -140,6 +169,26 @@ async fn create_popup_alert(
     }
 }
 
+// Get notification settings
+#[tauri::command]
+async fn get_notification_settings(
+    state: tauri::State<'_, NotificationState>
+) -> Result<NotificationSettings, String> {
+    let settings = state.settings.lock().unwrap();
+    Ok(settings.clone())
+}
+
+// Set notification settings
+#[tauri::command]
+async fn set_notification_settings(
+    new_settings: NotificationSettings,
+    state: tauri::State<'_, NotificationState>
+) -> Result<(), String> {
+    let mut settings = state.settings.lock().unwrap();
+    *settings = new_settings;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // We no longer need to call elevate_at_startup() here since we're using
@@ -149,9 +198,10 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_notification::init())
-        .manage(FirewallState::default())
-        .manage(BlockedDomains::default())        .invoke_handler(tauri::generate_handler![
+        .plugin(tauri_plugin_notification::init())        .manage(FirewallState::default())
+        .manage(BlockedDomains::default())
+        .manage(NotificationState::default())
+        .invoke_handler(tauri::generate_handler![
             greet,
             get_firewall_rules,
             add_firewall_rule,
@@ -167,10 +217,11 @@ pub fn run() {
             extract_and_handle_events,
             ask_ai,
             send_notification,
-            show_domain_blocked_notification,
-            read_flow_report,
+            show_domain_blocked_notification,            read_flow_report,
             generate_flow_report,
-            create_popup_alert
+            create_popup_alert,
+            get_notification_settings,
+            set_notification_settings
         ]).setup(|app| {
             // Initialize blocked domains list from file synchronously
             let app_handle = app.handle().clone();

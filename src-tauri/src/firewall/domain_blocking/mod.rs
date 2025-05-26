@@ -1,13 +1,13 @@
 // firewall/domain_blocking/mod.rs - Module file for domain blocking functionality
 pub mod utils;
+pub mod monitor;
 
 use tauri::{AppHandle, State, Manager, Emitter};
-use tauri_plugin_shell::ShellExt;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use crate::firewall::common::{BlockedDomains, run_shell_command, run_elevated_powershell};
-use utils::{log_debug, resolve_domain_to_ip, try_alternative_resolution};
+use crate::firewall::common::{BlockedDomains, run_elevated_powershell};
+use utils::log_debug;
 
 // Path to the domains list file
 fn get_domains_file_path(app: &AppHandle) -> PathBuf {
@@ -123,8 +123,7 @@ pub async fn block_domain(
     let outbound_rule_prefix = format!("Block-Domain-Outbound-{}", domain);
     let inbound_rule_prefix = format!("Block-Domain-Inbound-{}", domain);
     log_debug(&format!("Creating firewall rules with prefixes: {} and {}", outbound_rule_prefix, inbound_rule_prefix));
-    
-    // First, try to resolve the domain to IP addresses (multiple IPs)
+      // First, try to resolve the domain to IP addresses (multiple IPs)
     log_debug(&format!("Attempting to resolve domain {} to IP addresses...", domain));
     let ip_result = utils::resolve_domain_to_ips(&app, &domain).await;
     
@@ -241,22 +240,22 @@ pub async fn block_domain(
                 log_debug(&format!("Failed to emit domain blocked event: {}", e));
             }
             
-            // Also trigger a popup alert for critical security notification
-            log_debug(&format!("Creating popup alert for blocked domain: {}", domain));
-            let popup_title = "🚫 Domain Blocked";
-            let popup_message = format!(
-                "Security Alert: Access to \"{}\" has been blocked.\n\nThis domain was identified as potentially malicious and has been added to your firewall rules.\n\nYour system is now protected from this threat.", 
-                domain
-            );
+            // // Also trigger a popup alert for critical security notification
+            // log_debug(&format!("Creating popup alert for blocked domain: {}", domain));
+            // let popup_title = "🚫 Domain Blocked";
+            // let popup_message = format!(
+            //     "Security Alert: Access to \"{}\" has been blocked.\n\nThis domain was identified as potentially malicious and has been added to your firewall rules.\n\nYour system is now protected from this threat.", 
+            //     domain
+            // );
             
-            // Use the app's invoke system to call our popup alert command
-            if let Err(e) = app.emit("create-popup-alert", serde_json::json!({
-                "title": popup_title,
-                "message": popup_message,
-                "alertType": "blocked"
-            })) {
-                log_debug(&format!("Failed to trigger popup alert: {}", e));
-            }
+            // // Use the app's invoke system to call our popup alert command
+            // if let Err(e) = app.emit("create-popup-alert", serde_json::json!({
+            //     "title": popup_title,
+            //     "message": popup_message,
+            //     "alertType": "blocked"
+            // })) {
+            //     log_debug(&format!("Failed to trigger popup alert: {}", e));
+            // }
             
             Ok(())
         },

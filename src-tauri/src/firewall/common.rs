@@ -66,6 +66,37 @@ impl Default for BlockedDomains {
     }
 }
 
+// Structure to hold notification settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NotificationSettings {
+    pub domain_blocked_delay_seconds: u64,
+    pub cooldown_seconds: u64,
+    pub enabled: bool,
+}
+
+impl Default for NotificationSettings {
+    fn default() -> Self {
+        NotificationSettings {
+            domain_blocked_delay_seconds: 2, // Default 2 seconds delay
+            cooldown_seconds: 30, // 30 seconds between same domain notifications
+            enabled: true,
+        }
+    }
+}
+
+// State for managing notification settings
+pub struct NotificationState {
+    pub settings: Arc<Mutex<NotificationSettings>>,
+}
+
+impl Default for NotificationState {
+    fn default() -> Self {
+        NotificationState {
+            settings: Arc::new(Mutex::new(NotificationSettings::default())),
+        }
+    }
+}
+
 // Function to run netsh commands
 pub async fn run_netsh_command(app: &AppHandle, args: Vec<&str>) -> Result<String, FirewallError> {
     let output = app.shell()

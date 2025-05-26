@@ -19,15 +19,21 @@ export default function AdminPage() {
     firewallRules: 0,
     suricataStatus: false
   });
-    const [testResult, setTestResult] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [customTitle, setCustomTitle] = useState('');
   const [customMessage, setCustomMessage] = useState('');
   const [customType, setCustomType] = useState<AlertType>('info');
+  const [notificationSettings, setNotificationSettings] = useState({
+    domain_blocked_delay_seconds: 2,
+    cooldown_seconds: 30,
+    enabled: true
+  });
+  const [settingsChanged, setSettingsChanged] = useState(false);
   const { showNotification } = useNotification();
-
   useEffect(() => {
     loadSystemInfo();
+    loadNotificationSettings();
   }, []);
 
   const loadSystemInfo = async () => {
@@ -46,6 +52,43 @@ export default function AdminPage() {
     } catch (error) {
       console.error("Failed to load system info:", error);
     }
+  };
+
+  const loadNotificationSettings = async () => {
+    try {
+      const settings = await invoke<any>("get_notification_settings");
+      setNotificationSettings(settings);
+      setSettingsChanged(false);
+    } catch (error) {
+      console.error("Failed to load notification settings:", error);
+    }
+  };
+
+  const saveNotificationSettings = async () => {
+    try {
+      await invoke("set_notification_settings", { newSettings: notificationSettings });
+      setSettingsChanged(false);
+      showNotification({
+        title: '✅ Settings Saved',
+        message: 'Notification settings have been updated successfully.',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error("Failed to save notification settings:", error);
+      showNotification({
+        title: '❌ Save Failed',
+        message: 'Failed to save notification settings.',
+        type: 'error'
+      });
+    }
+  };
+
+  const updateNotificationSetting = (key: string, value: any) => {
+    setNotificationSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+    setSettingsChanged(true);
   };
   const triggerTestNotification = async () => {
     try {
@@ -158,7 +201,6 @@ export default function AdminPage() {
     setTestResult("✅ Tauri firewall alert window created!");
     setTimeout(() => setTestResult(null), 3000);
   };
-
   const testCustomTauriAlert = async () => {
     if (!customTitle.trim() || !customMessage.trim()) {
       showNotification({
@@ -178,9 +220,49 @@ export default function AdminPage() {
     setTestResult("✅ Custom Tauri alert window created!");
     setTimeout(() => setTestResult(null), 3000);
   };
-
   return (
-    <div className="relative min-h-screen bg-[#FEDCC1] overflow-hidden">
+    <>
+      <style jsx>{`
+        .slider-blue::-webkit-slider-thumb {
+          appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #3b82f6;
+          cursor: pointer;
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .slider-green::-webkit-slider-thumb {
+          appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #10b981;
+          cursor: pointer;
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .slider-blue::-moz-range-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #3b82f6;
+          cursor: pointer;
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .slider-green::-moz-range-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #10b981;
+          cursor: pointer;
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+      `}</style>
+      <div className="relative min-h-screen bg-[#FEDCC1] overflow-hidden">
       <div
         className="absolute inset-0 bg-center bg-cover bg-no-repeat bg-fixed opacity-50"
         style={{
@@ -225,7 +307,212 @@ export default function AdminPage() {
               </p>
             </div>
           </div>
-        </div>        {/* Notification System Tests */}
+        </div>
+
+        {/* Notification Settings */}
+        <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">⚙️ Notification Settings</h2>
+          <p className="text-gray-600 mb-6">
+            Configure how and when domain blocking notifications are sent to users.
+          </p>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Settings Controls */}
+            <div className="space-y-6">
+              {/* Enable/Disable Notifications */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={notificationSettings.enabled}
+                    onChange={(e) => updateNotificationSetting('enabled', e.target.checked)}
+                    className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <div>
+                    <span className="text-lg font-semibold text-gray-800">
+                      🔔 Enable Domain Block Notifications
+                    </span>
+                    <p className="text-sm text-gray-600">
+                      Show notifications when domains are blocked
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Notification Delay */}
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <label className="block text-gray-800 font-semibold mb-2">
+                  ⏱️ Notification Delay: {notificationSettings.domain_blocked_delay_seconds} seconds
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="0.5"
+                  value={notificationSettings.domain_blocked_delay_seconds}
+                  onChange={(e) => updateNotificationSetting('domain_blocked_delay_seconds', parseFloat(e.target.value))}
+                  className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer slider-blue"
+                />
+                <div className="flex justify-between text-xs text-blue-600 mt-1">
+                  <span>Instant</span>
+                  <span>5s</span>
+                  <span>10s</span>
+                </div>
+                <p className="text-sm text-blue-700 mt-2">
+                  How long to wait before showing the notification after a domain is blocked
+                </p>
+              </div>
+
+              {/* Cooldown Period */}
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <label className="block text-gray-800 font-semibold mb-2">
+                  🕒 Cooldown Period: {notificationSettings.cooldown_seconds} seconds
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="300"
+                  step="5"
+                  value={notificationSettings.cooldown_seconds}
+                  onChange={(e) => updateNotificationSetting('cooldown_seconds', parseInt(e.target.value))}
+                  className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer slider-green"
+                />
+                <div className="flex justify-between text-xs text-green-600 mt-1">
+                  <span>5s</span>
+                  <span>2.5min</span>
+                  <span>5min</span>
+                </div>
+                <p className="text-sm text-green-700 mt-2">
+                  Minimum time between notifications to prevent spam
+                </p>
+              </div>
+
+              {/* Precise Input Fields */}
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 className="font-semibold text-purple-800 mb-3">🎯 Precise Values</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-purple-700 mb-1">
+                      Delay (seconds)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value={notificationSettings.domain_blocked_delay_seconds}
+                      onChange={(e) => updateNotificationSetting('domain_blocked_delay_seconds', parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 border border-purple-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-purple-700 mb-1">
+                      Cooldown (seconds)
+                    </label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="300"
+                      value={notificationSettings.cooldown_seconds}
+                      onChange={(e) => updateNotificationSetting('cooldown_seconds', parseInt(e.target.value) || 5)}
+                      className="w-full px-3 py-2 border border-purple-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Settings Preview and Actions */}
+            <div className="space-y-6">
+              {/* Current Settings Display */}
+              <div className="bg-gradient-to-br from-orange-50 to-yellow-50 p-6 rounded-lg border border-orange-200">
+                <h4 className="font-semibold text-orange-800 mb-4">📋 Current Configuration</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-orange-700">Status:</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      notificationSettings.enabled 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {notificationSettings.enabled ? '✅ Enabled' : '❌ Disabled'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-orange-700">Notification Delay:</span>
+                    <span className="font-mono bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      {notificationSettings.domain_blocked_delay_seconds}s
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-orange-700">Cooldown Period:</span>
+                    <span className="font-mono bg-green-100 text-green-800 px-2 py-1 rounded">
+                      {notificationSettings.cooldown_seconds}s
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Save/Reset Actions */}
+              <div className="space-y-3">
+                <button
+                  onClick={saveNotificationSettings}
+                  disabled={!settingsChanged}
+                  className={`w-full font-bold py-3 px-6 rounded-lg transition-colors ${
+                    settingsChanged
+                      ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {settingsChanged ? '💾 Save Settings' : '✅ Settings Saved'}
+                </button>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={loadNotificationSettings}
+                    className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded transition-colors"
+                  >
+                    🔄 Reset
+                  </button>
+                  <button
+                    onClick={triggerTestNotification}
+                    disabled={!notificationSettings.enabled}
+                    className={`font-medium py-2 px-4 rounded transition-colors ${
+                      notificationSettings.enabled
+                        ? 'bg-purple-500 hover:bg-purple-600 text-white'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    🧪 Test
+                  </button>
+                </div>
+              </div>
+
+              {/* Settings Info */}
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h5 className="font-semibold text-gray-800 mb-2">ℹ️ How It Works:</h5>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>• <strong>Delay:</strong> Time to wait before showing notification</li>
+                  <li>• <strong>Cooldown:</strong> Prevents notification spam</li>
+                  <li>• <strong>Settings persist:</strong> Automatically saved to backend</li>
+                  <li>• <strong>Real-time:</strong> Changes apply immediately</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Settings Changed Indicator */}
+          {settingsChanged && (
+            <div className="mt-4 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded flex items-center">
+              <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span className="font-medium">⚠️ You have unsaved changes. Click "Save Settings" to apply them.</span>
+            </div>
+          )}
+        </div>
+
+        {/* Notification System Tests */}
         <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">🔔 Notification System</h2>
           <p className="text-gray-600 mb-4">
@@ -495,8 +782,8 @@ export default function AdminPage() {
               Close
             </button>
           </div>
-        </div>
-      </Modal>
-    </div>
+        </div>      </Modal>
+      </div>
+    </>
   );
 }
