@@ -146,16 +146,15 @@ export default function TrayStatus({ className = '' }: TrayStatusProps) {
   };
 
   const setStatusTooltip = async (status: string) => {
-    const messages = {
-      monitoring: '🟢 HackAttack - Actively Monitoring',
-      idle: '🟡 HackAttack - Idle',
-      alert: '🔴 HackAttack - Security Alert Active',
-      scanning: '🔍 HackAttack - Scanning Network'
+    const messages = {      monitoring: '🟢 Security Smile - Actively Monitoring',
+      idle: '🟡 Security Smile - Idle',
+      alert: '🔴 Security Smile - Security Alert Active',
+      scanning: '🔍 Security Smile - Scanning Network'
     };
 
     try {
       await invoke('set_tray_tooltip', { 
-        message: messages[status as keyof typeof messages] || '🛡️ HackAttack Security Monitor'
+        message: messages[status as keyof typeof messages] || '🛡️ Security Smile Security Monitor'
       });
     } catch (error) {
       console.error('Failed to update tray status:', error);

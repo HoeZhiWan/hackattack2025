@@ -286,7 +286,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">🛡️ HackAttack Admin Panel</h1>
+        <h1 className="text-3xl font-bold mb-6 text-gray-800">🛡️ Security Smile Admin Panel</h1>
         
         {/* System Overview */}
         <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-6">
@@ -718,7 +718,7 @@ export default function AdminPage() {
         <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
           <h3 className="font-bold">ℹ️ About This Admin Panel</h3>
           <p className="text-sm mt-2">
-            This admin panel provides system oversight and testing capabilities for HackAttack.
+            This admin panel provides system oversight and testing capabilities for Security Smile.
             Access is granted by clicking the logo 3 times quickly on the main navigation bar.
             The notification system will show tray popups when domains are blocked automatically.
           </p>

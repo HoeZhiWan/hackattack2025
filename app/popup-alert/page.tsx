@@ -127,7 +127,7 @@ export default function PopupAlert() {
         {/* Footer */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500 bg-white/70 rounded-full px-3 py-1 inline-block">
-            🛡️ HackAttack Security Alert
+            🛡️ Security Smile Security Alert
           </p>
         </div>
       </div>
