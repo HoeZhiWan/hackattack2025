@@ -168,6 +168,11 @@ export default function DepartmentManagement({ deptTab, setDeptTab }: Props) {
 
   return (
     <div className="w-full">
+      {/* Title */}
+      <h1 className="text-xl font-bold mb-3 flex items-center">
+        <span className="mr-2">⚔️</span>
+        Department Settings
+      </h1>
       {/* Tabs */}
       <div className="flex w-full mb-6 bg-[#ffefdf] rounded-xl p-2 justify-start">
         <button
@@ -178,7 +183,7 @@ export default function DepartmentManagement({ deptTab, setDeptTab }: Props) {
           onClick={() => setDeptTab("setup")}
           style={{ transition: "background 0.2s" }}
         >
-          Department Management
+          Department Setup
         </button>
         <button
           className={`px-6 py-2 mx-1 font-semibold text-[15px] rounded-lg transition shadow-sm

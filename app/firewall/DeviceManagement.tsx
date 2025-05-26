@@ -92,7 +92,11 @@ export default function DeviceManagement() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#FEDCC1] overflow-hidden">
+    <div className="relative min-h-screen bg-[#ffffff] overflow-hidden">
+      {/* 50% white opacity overlay */}
+      <div className="absolute inset-0 bg-white/50 pointer-events-none z-0" />
+      {/* Optional: background image, if you want to keep it */}
+      {/*
       <div
         className="absolute inset-0 bg-center bg-cover bg-no-repeat bg-fixed opacity-50"
         style={{
@@ -100,8 +104,9 @@ export default function DeviceManagement() {
           filter: "brightness(1.0) contrast(1.1)",
         }}
       />
+      */}
 
-      <div className="container mx-auto p-4 relative z-10">
+      <div className="container mx-auto p-4 relative z-10 rounded-6xl">
       
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -116,7 +121,7 @@ export default function DeviceManagement() {
       )}
       
       {/* Add new rule form */}
-      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-6">
+      <div className="bg-[#f5f5f0] shadow-md rounded px-8 pt-6 pb-8 mb-6">
         <h2 className="text-xl font-semibold mb-4">Add New Rule</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -240,7 +245,7 @@ export default function DeviceManagement() {
       </div>
       
       {/* Rules List */}
-      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8">
+      <div className="bg-[#f5f5f0] shadow-md rounded px-8 pt-6 pb-8">
         <h2 className="text-xl font-semibold mb-4">Firewall Rules</h2>
         
         {loading ? (

@@ -31,10 +31,9 @@ export default function FirewallPage() {
         {/* Firewall Configuration Section */}
         <div className="bg-white rounded-lg shadow-md mb-8">
           {/* Section Header */}
-          <div className="flex items-center bg-orange-600 text-white rounded-t-lg px-6 py-4">
-            {/* Optional: Add an icon here */}
-            <span className="material-icons mr-2">security</span>
-            <span className="text-xl font-semibold">Firewall Configuration</span>
+          <div className="bg-orange-600 px-6 py-4">
+            <span className="text-white text-xl mr-2">📛</span>
+            <span className="text-white font-bold text-2xl">Firewall Configuration</span>
           </div>
 
           {/* Tabs */}
