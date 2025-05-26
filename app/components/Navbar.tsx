@@ -36,7 +36,7 @@ export default function Navbar() {
           {/* Logo - Always on the left */}
           <div className="relative flex">            <Image 
               src="/logo1.png"       // path from the public folder
-              alt="HackAttack Logo" // alt text for accessibility
+              alt="Security Smile Logo" // alt text for accessibility
               width={300}            // adjusted for better mobile responsiveness
               height={200}
               className="object-contain cursor-pointer hover:opacity-80 transition-opacity w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56"

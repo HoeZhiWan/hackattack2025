@@ -84,19 +84,19 @@ pub fn create_tray_with_state(app_handle: &AppHandle, initial_state: TrayState) 
     println!("🔧 Creating new tray icon with state: {:?}", initial_state);
       // Get state info for menu creation
     let (status_text, tooltip_text) = match initial_state {
-        TrayState::Active => ("✅ System Status: Active", "🛡️ HackAttack Security Monitor - Active"),
-        TrayState::Passive => ("💤 System Status: Passive", "🛡️ HackAttack Security Monitor - Passive"),
-        TrayState::Disabled => ("📴 System Status: Disabled", "🛡️ HackAttack Security Monitor - Disabled"),
+        TrayState::Active => ("✅ System Status: Active", "🛡️ Security Smile Security Monitor - Active"),
+        TrayState::Passive => ("💤 System Status: Passive", "🛡️ Security Smile Security Monitor - Passive"),
+        TrayState::Disabled => ("📴 System Status: Disabled", "🛡️ Security Smile Security Monitor - Disabled"),
     };
     
     // Create the menu items
-    let show_app = tauri::menu::MenuItem::with_id(app_handle, "show", "🔍 Show HackAttack", true, None::<&str>)?;
+    let show_app = tauri::menu::MenuItem::with_id(app_handle, "show", "🔍 Show Security Smile", true, None::<&str>)?;
     let hide_app = tauri::menu::MenuItem::with_id(app_handle, "hide", "📥 Hide to Tray", true, None::<&str>)?;
     let separator1 = tauri::menu::PredefinedMenuItem::separator(app_handle)?;
     let status = tauri::menu::MenuItem::with_id(app_handle, "status", status_text, false, None::<&str>)?;
     let toggle_state = tauri::menu::MenuItem::with_id(app_handle, "toggle_state", "🔄 Toggle Status", true, None::<&str>)?;
     let separator2 = tauri::menu::PredefinedMenuItem::separator(app_handle)?;
-    let about = tauri::menu::MenuItem::with_id(app_handle, "about", "ℹ️ About HackAttack", true, None::<&str>)?;
+    let about = tauri::menu::MenuItem::with_id(app_handle, "about", "ℹ️ About Security Smile", true, None::<&str>)?;
     let quit = tauri::menu::MenuItem::with_id(app_handle, "quit", "❌ Quit", true, None::<&str>)?;
 
     // Create a comprehensive menu
@@ -353,22 +353,22 @@ pub fn update_tray_state_in_place(app_handle: &AppHandle, new_state: TrayState) 
     if let Some(tray) = tray_guard.icon.as_ref() {
         // Get state info for menu and tooltip updates
         let (status_text, tooltip_text) = match new_state {
-        TrayState::Active => ("✅ System Status: Active", "🛡️ HackAttack Security Monitor - Active"),
-        TrayState::Passive => ("💤 System Status: Passive", "🛡️ HackAttack Security Monitor - Passive"),
-        TrayState::Disabled => ("📴 System Status: Disabled", "🛡️ HackAttack Security Monitor - Disabled"),
+        TrayState::Active => ("✅ System Status: Active", "🛡️ Security Smile Security Monitor - Active"),
+        TrayState::Passive => ("💤 System Status: Passive", "🛡️ Security Smile Security Monitor - Passive"),
+        TrayState::Disabled => ("📴 System Status: Disabled", "🛡️ Security Smile Security Monitor - Disabled"),
         };
         
         // Update tooltip
         let _ = tray.set_tooltip(Some(tooltip_text));
         
         // Create updated menu
-        let show_app = tauri::menu::MenuItem::with_id(app_handle, "show", "🔍 Show HackAttack", true, None::<&str>)?;
+        let show_app = tauri::menu::MenuItem::with_id(app_handle, "show", "🔍 Show Security Smile", true, None::<&str>)?;
         let hide_app = tauri::menu::MenuItem::with_id(app_handle, "hide", "📥 Hide to Tray", true, None::<&str>)?;
         let separator1 = tauri::menu::PredefinedMenuItem::separator(app_handle)?;
         let status = tauri::menu::MenuItem::with_id(app_handle, "status", status_text, false, None::<&str>)?;
         let toggle_state = tauri::menu::MenuItem::with_id(app_handle, "toggle_state", "🔄 Toggle Status", true, None::<&str>)?;
         let separator2 = tauri::menu::PredefinedMenuItem::separator(app_handle)?;
-        let about = tauri::menu::MenuItem::with_id(app_handle, "about", "ℹ️ About HackAttack", true, None::<&str>)?;
+        let about = tauri::menu::MenuItem::with_id(app_handle, "about", "ℹ️ About Security Smile", true, None::<&str>)?;
         let quit = tauri::menu::MenuItem::with_id(app_handle, "quit", "❌ Quit", true, None::<&str>)?;
 
         let menu = tauri::menu::Menu::with_items(app_handle, &[

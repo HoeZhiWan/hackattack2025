@@ -7,7 +7,7 @@ fn main() {
     dotenv::dotenv().ok();
 
     // Initialize your library or app logic before starting Tauri
-    hackattack_lib::run();
+    security_smile_lib::run();
 
     // Start Tauri app and register commands
     tauri::Builder::default()

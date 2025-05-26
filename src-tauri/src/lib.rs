@@ -128,7 +128,7 @@ async fn show_domain_blocked_notification(
     }
     
     let title = "🚫 Domain Blocked";
-    let body = format!("Domain {} has been blocked by HackAttack. Click to learn more.", domain);
+    let body = format!("Domain {} has been blocked by Security Smile. Click to learn more.", domain);
     
     // Show system notification
     match app.notification()
