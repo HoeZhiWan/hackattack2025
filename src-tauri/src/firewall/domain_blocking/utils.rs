@@ -1,6 +1,5 @@
 // domain_blocking/utils.rs - Utility functions for domain blocking
 use tauri::AppHandle;
-use tauri_plugin_shell::ShellExt;
 use std::time::{SystemTime, UNIX_EPOCH};
 use regex::Regex;
 use crate::firewall::common::run_shell_command;
@@ -193,10 +192,9 @@ fn is_valid_ip_format(ip: &str) -> bool {
             log_debug(&format!("IPv4 should have 4 octets, found {}: {}", octets.len(), ip));
             return false;
         }
-        
-        for octet in octets {
-            if let Ok(value) = octet.parse::<u8>() {
-                // Valid octet
+          for octet in octets {
+            if let Ok(value) = octet.parse::<u32>() {
+                // Valid octet - check range for IPv4
                 if value > 255 {
                     log_debug(&format!("Invalid IPv4 octet value (>255): {}", octet));
                     return false;
@@ -248,4 +246,149 @@ pub async fn try_alternative_resolution(app: &AppHandle, domain: &str) -> Result
     
     log_debug(&format!("Failed to resolve domain using alternative methods: {}", domain));
     Err(format!("Could not resolve domain using alternative methods: {}", domain))
+}
+
+// Reverse DNS lookup - resolve IP address to domain name
+pub async fn resolve_ip_to_domain(app: &AppHandle, ip: &str) -> Result<String, String> {
+    log_debug(&format!("Performing reverse DNS lookup for IP: {}", ip));
+    
+    if !is_valid_ip_format(ip) {
+        return Err(format!("Invalid IP address format: {}", ip));
+    }
+    
+    // Use nslookup for reverse DNS lookup
+    let nslookup_output = match run_shell_command(app, "cmd", vec!["/c", &format!("nslookup {}", ip)]).await {
+        Ok(output) => output,
+        Err(e) => {
+            let error_msg = format!("Failed to execute nslookup command for IP {}: {}", ip, e);
+            log_debug(&error_msg);
+            return Err(error_msg);
+        }
+    };
+    
+    // Extract domain name from reverse DNS lookup output
+    if let Some(domain) = extract_domain_from_reverse_nslookup(&nslookup_output) {
+        log_debug(&format!("Successfully resolved IP {} to domain: {}", ip, domain));
+        return Ok(domain);
+    }
+    
+    log_debug(&format!("Could not resolve IP {} to domain name", ip));
+    Err(format!("Could not resolve IP {} to domain name", ip))
+}
+
+// Extract domain name from reverse nslookup output
+pub fn extract_domain_from_reverse_nslookup(nslookup_output: &str) -> Option<String> {
+    log_debug("Parsing reverse nslookup output to extract domain name");
+    log_debug(&format!("Full reverse nslookup output:\n{}", nslookup_output));
+    
+    // Look for lines like "Name:    example.com"
+    for line in nslookup_output.lines() {
+        let trimmed = line.trim();
+        
+        if trimmed.starts_with("Name:") {
+            if let Some(domain) = trimmed.strip_prefix("Name:").map(|s| s.trim()) {
+                if !domain.is_empty() && is_valid_domain_format(domain) {
+                    log_debug(&format!("Found domain name: {}", domain));
+                    return Some(domain.to_string());
+                }
+            }
+        }
+    }
+    
+    log_debug("No domain name found in reverse nslookup output");
+    None
+}
+
+// Check if an IP belongs to a blocked domain by maintaining IP-to-domain cache
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
+lazy_static::lazy_static! {
+    static ref IP_DOMAIN_CACHE: Arc<Mutex<HashMap<String, CachedDomainInfo>>> = Arc::new(Mutex::new(HashMap::new()));
+}
+
+#[derive(Clone)]
+struct CachedDomainInfo {
+    domain: String,
+    timestamp: u64,
+}
+
+const IP_CACHE_EXPIRY_SECONDS: u64 = 3600; // Cache IPs for 1 hour
+
+// Enhanced IP-to-domain mapping with caching
+pub async fn check_ip_against_blocked_domains_cached(
+    app: &AppHandle,
+    ip: &str,
+    blocked_domains: &std::collections::HashSet<String>
+) -> Option<String> {
+    log_debug(&format!("Checking if IP {} belongs to any blocked domain", ip));
+    
+    // First check cache
+    let current_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    
+    {
+        let cache = IP_DOMAIN_CACHE.lock().unwrap();
+        if let Some(cached_info) = cache.get(ip) {
+            // Check if cache entry is still valid
+            if current_time - cached_info.timestamp < IP_CACHE_EXPIRY_SECONDS {
+                if blocked_domains.contains(&cached_info.domain) {
+                    log_debug(&format!("Found cached blocked domain for IP {}: {}", ip, cached_info.domain));
+                    return Some(cached_info.domain.clone());
+                } else {
+                    log_debug(&format!("Found cached domain for IP {} but it's not blocked: {}", ip, cached_info.domain));
+                    return None;
+                }
+            }
+        }
+    }
+    
+    // Cache miss or expired - perform reverse DNS lookup
+    match resolve_ip_to_domain(app, ip).await {
+        Ok(domain) => {
+            // Update cache
+            {
+                let mut cache = IP_DOMAIN_CACHE.lock().unwrap();
+                cache.insert(ip.to_string(), CachedDomainInfo {
+                    domain: domain.clone(),
+                    timestamp: current_time,
+                });
+            }
+            
+            // Check if resolved domain is in blocked list
+            if blocked_domains.contains(&domain) {
+                log_debug(&format!("IP {} resolved to blocked domain: {}", ip, domain));
+                return Some(domain);
+            } else {
+                log_debug(&format!("IP {} resolved to non-blocked domain: {}", ip, domain));
+                return None;
+            }
+        },
+        Err(_) => {
+            log_debug(&format!("Could not resolve IP {} to domain", ip));
+            return None;
+        }
+    }
+}
+
+// Cleanup old cache entries
+pub fn cleanup_ip_domain_cache() {
+    let current_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    
+    let mut cache = IP_DOMAIN_CACHE.lock().unwrap();
+    let initial_size = cache.len();
+    
+    cache.retain(|_, cached_info| {
+        current_time - cached_info.timestamp < IP_CACHE_EXPIRY_SECONDS
+    });
+    
+    let final_size = cache.len();
+    if initial_size != final_size {
+        log_debug(&format!("Cleaned up IP-domain cache: {} -> {} entries", initial_size, final_size));
+    }
 }

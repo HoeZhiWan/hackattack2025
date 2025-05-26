@@ -118,7 +118,7 @@ pub fn kill_suricata() {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AlertEvent {
     pub timestamp: String,
     pub src_ip: Option<String>,
