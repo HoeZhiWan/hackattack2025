@@ -54,9 +54,8 @@ export default function Navbar() {
             <NavLink href="/" current={pathname === "/"}>Home</NavLink>
             <NavLink href="/firewall" current={pathname === "/firewall"}>Firewall</NavLink>
             <NavLink href="/domain-blocker" current={pathname === "/domain-blocker"}>Domain Blocker</NavLink>
-            <NavLink href="/network-traffic-analysis" current={pathname === "/network-traffic-analysis"}>Network Traffic Analysis</NavLink>
-            
-            {/* Add more navigation links here as your app grows */}          </div>
+            <NavLink href="/network-traffic-analysis" current={pathname === "/network-traffic-analysis"}>Intrusion Detection System</NavLink>
+          </div>
           
           {/* Mobile menu button - Always on the right for mobile */}
           <div className="md:hidden flex-shrink-0"><button className="group flex items-center px-3 py-2 sm:px-4 sm:py-3 border-2 rounded-lg text-[#FF4E00] border-[#FF4E00] hover:bg-[#FF4E00] hover:text-white transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md">
