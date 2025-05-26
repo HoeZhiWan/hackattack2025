@@ -30,6 +30,27 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+// Simple notification function
+#[tauri::command]
+async fn send_notification(title: String, message: String, app: AppHandle) -> Result<(), String> {
+    use tauri_plugin_notification::NotificationExt;
+    
+    match app.notification()
+        .builder()
+        .title(&title)
+        .body(&message)
+        .show() {
+        Ok(_) => {
+            println!("Notification sent: {} - {}", title, message);
+            Ok(())
+        },
+        Err(e) => {
+            println!("Failed to send notification: {}", e);
+            Err(format!("Failed to send notification: {}", e))
+        }
+    }
+}
+
 // Domain blocking notification system
 #[tauri::command]
 async fn show_domain_blocked_notification(domain: String, app: AppHandle) -> Result<(), String> {
@@ -51,6 +72,58 @@ async fn show_domain_blocked_notification(domain: String, app: AppHandle) -> Res
         Err(e) => {
             println!("Failed to send notification: {}", e);
             Err(format!("Failed to send notification: {}", e))
+        }
+    }
+}
+
+// Create popup alert window
+#[tauri::command]
+async fn create_popup_alert(
+    title: String, 
+    message: String, 
+    alert_type: String,
+    app: AppHandle
+) -> Result<(), String> {
+    use tauri::{WebviewWindowBuilder, WebviewUrl};
+    
+    // Create a unique window label
+    let window_label = format!("popup-alert-{}", std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis());
+    
+    // Encode the data as query parameters
+    let encoded_title = urlencoding::encode(&title);
+    let encoded_message = urlencoding::encode(&message);
+    let encoded_type = urlencoding::encode(&alert_type);
+    
+    let popup_url = format!(
+        "http://localhost:3000/popup-alert?title={}&message={}&type={}", 
+        encoded_title, encoded_message, encoded_type
+    );
+    
+    match WebviewWindowBuilder::new(
+        &app,
+        &window_label,
+        WebviewUrl::External(popup_url.parse().unwrap())
+    )
+    .title(&format!("Alert: {}", title))
+    .inner_size(400.0, 300.0)
+    .min_inner_size(350.0, 250.0)
+    .max_inner_size(600.0, 500.0)
+    .center()
+    .resizable(true)
+    .always_on_top(true)
+    .skip_taskbar(false)
+    .focused(true)
+    .build() {
+        Ok(window) => {
+            println!("Popup alert window created: {}", window_label);
+            Ok(())
+        },
+        Err(e) => {
+            println!("Failed to create popup window: {}", e);
+            Err(format!("Failed to create popup window: {}", e))
         }
     }
 }
@@ -79,7 +152,9 @@ pub fn run() {
             run_suricata,
             kill_suricata,
             read_alert_events_from_eve,
-            show_domain_blocked_notification
+            send_notification,
+            show_domain_blocked_notification,
+            create_popup_alert
         ]).setup(|app| {
             // Initialize blocked domains list from file synchronously
             let app_handle = app.handle().clone();

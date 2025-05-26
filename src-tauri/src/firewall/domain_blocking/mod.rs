@@ -235,11 +235,27 @@ pub async fn block_domain(
             }
               log_debug(&format!("Domain blocking completed. Created {} firewall rules for domain {}", 
                           rule_count, domain));
-            
-            // Show notification to user that domain was blocked
+              // Show notification to user that domain was blocked
             log_debug(&format!("Triggering notification for blocked domain: {}", domain));
             if let Err(e) = app.emit("domain-blocked-notification", &domain) {
                 log_debug(&format!("Failed to emit domain blocked event: {}", e));
+            }
+            
+            // Also trigger a popup alert for critical security notification
+            log_debug(&format!("Creating popup alert for blocked domain: {}", domain));
+            let popup_title = "🚫 Domain Blocked";
+            let popup_message = format!(
+                "Security Alert: Access to \"{}\" has been blocked.\n\nThis domain was identified as potentially malicious and has been added to your firewall rules.\n\nYour system is now protected from this threat.", 
+                domain
+            );
+            
+            // Use the app's invoke system to call our popup alert command
+            if let Err(e) = app.emit("create-popup-alert", serde_json::json!({
+                "title": popup_title,
+                "message": popup_message,
+                "alertType": "blocked"
+            })) {
+                log_debug(&format!("Failed to trigger popup alert: {}", e));
             }
             
             Ok(())

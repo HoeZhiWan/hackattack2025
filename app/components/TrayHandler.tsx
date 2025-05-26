@@ -3,9 +3,9 @@
 import { useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { createPopupAlert } from '../utils/popup-alerts';
 
-export default function TrayHandler() {
-  useEffect(() => {
+export default function TrayHandler() {  useEffect(() => {
     // Listen for tray events from the Rust backend
     const unlistenTrayEvent = listen('tray-event', async (event) => {
       const action = event.payload as string;
@@ -15,6 +15,27 @@ export default function TrayHandler() {
         // The window is already hidden by the Rust code,
         // but we can add any additional frontend handling here
         console.log('Window minimized to tray');
+      }
+    });
+
+    // Listen for popup alert creation events
+    const unlistenPopupAlert = listen('create-popup-alert', async (event) => {
+      const { title, message, alertType } = event.payload as {
+        title: string;
+        message: string;
+        alertType: string;
+      };
+      
+      console.log(`Creating popup alert: ${title}`);
+      
+      try {
+        await createPopupAlert({
+          title,
+          message,
+          type: alertType as any
+        });
+      } catch (error) {
+        console.error('Failed to create popup alert:', error);
       }
     });
 
@@ -58,11 +79,10 @@ export default function TrayHandler() {
     // Initialize window events and store cleanup function
     setupWindowEvents().then(cleanup => {
       windowEventsCleanup = cleanup;
-    });
-
-    // Clean up all event listeners when the component unmounts
+    });    // Clean up all event listeners when the component unmounts
     return () => {
       unlistenTrayEvent.then(unlistenFn => unlistenFn());
+      unlistenPopupAlert.then(unlistenFn => unlistenFn());
       if (windowEventsCleanup) windowEventsCleanup();
     };
   }, []);
