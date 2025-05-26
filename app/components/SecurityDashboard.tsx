@@ -45,6 +45,7 @@ const threatSeverityData = [
 
 const SecurityDashboard = () => {
   const [isPassive, setIsPassive] = useState(true);
+  const [isHoveringReport, setIsHoveringReport] = useState(false);
 
   const toggleStatus = () => {
     setIsPassive((prev) => !prev);
@@ -224,28 +225,42 @@ const SecurityDashboard = () => {
             <RecentActivityItem time="24 min" ip="192.168.1.105" description="New device connected to network" />
             <RecentActivityItem time="26 min" ip="System" description="Firewall rules updated successfully" />
             <RecentActivityItem time="42 min" ip="192.168.1.105" description="Malicious URL access attempt blocked" />
-          </div>
-
-          {/* Fixed bottom content */}
+          </div>          {/* Fixed bottom content */}
           <div className="mt-auto border-t border-gray-200 bg-white/80 backdrop-blur-md px-6 py-5 rounded-b-xl shadow-inner">
             <div className="text-center text-blue-600 font-semibold text-base hover:text-blue-800  transition duration-200 mb-4 cursor-pointer">
               View All Activity
             </div>
 
-            <Button
-              color="#6c63ff"
-              style={{
-                width: "100%",
-                fontWeight: 600,
-                fontSize: "1rem",
-                fontFamily: "inherit",
-                padding: "12px 0",
-                borderRadius: "0.75rem",
-                transition: "transform 0.2s ease-in-out",
-              }}
+            <div 
+              className="relative"
+              onMouseEnter={() => setIsHoveringReport(true)}
+              onMouseLeave={() => setIsHoveringReport(false)}
             >
-              Generate Full Report
-            </Button>
+              <Button
+                color={isHoveringReport ? "#999" : "#6c63ff"}
+                style={{
+                  width: "100%",
+                  fontWeight: 600,
+                  fontSize: "1rem",
+                  fontFamily: "inherit",
+                  padding: "12px 0",
+                  borderRadius: "0.75rem",
+                  transition: "all 0.2s ease-in-out",
+                  cursor: isHoveringReport ? "not-allowed" : "pointer",
+                  opacity: isHoveringReport ? 0.7 : 1,
+                }}
+              >
+                Generate Full Report
+              </Button>
+              
+              {/* Coming Soon Tooltip */}
+              {isHoveringReport && (
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap z-10 opacity-0 animate-[fadeIn_0.2s_ease-in-out_forwards]">
+                  Feature coming soon
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

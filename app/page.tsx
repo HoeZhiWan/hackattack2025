@@ -49,7 +49,7 @@ export default function Page() {
         {/* Right: Content */}
         <div className="w-full md:w-2/3 flex flex-col gap-6">
           <div>
-            <p className="text-black/80 text-base">Greetings! Your system's status is</p>
+            <p className="text-black/80 text-base">Greetings <b>Leng Lui Leng Zai</b>! Your system's status is</p>
             <div className="flex items-center gap-2 mt-1">
               <CheckCircle className="text-green-400 w-6 h-6" />
               <h2 className="text-4xl font-extrabold text-green tracking-tight">Optimal</h2>

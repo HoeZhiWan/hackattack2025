@@ -17,12 +17,6 @@ use firewall::{
 };
 
 use firewall::common::{NotificationState, NotificationSettings};
-
-use firewall::domain_blocking::monitor::{
-    start_domain_access_monitor,
-    stop_domain_access_monitor,
-    is_domain_access_monitor_active
-};
 use tauri::{
     AppHandle
 };
@@ -43,6 +37,42 @@ use network_traffic_analysis::report::{
 use assistant::{
     ask_ai
 };
+
+// Import tray functions
+use tray::{
+    is_tray_active,
+    update_tray_tooltip,
+    toggle_tray_state,
+    set_tray_state,
+    get_tray_state,
+    TrayState
+};
+
+// Tray-related commands
+#[tauri::command]
+fn check_tray_status() -> bool {
+    is_tray_active()
+}
+
+#[tauri::command]
+fn set_tray_tooltip(message: String) -> Result<(), String> {
+    update_tray_tooltip(&message)
+}
+
+#[tauri::command]
+fn toggle_tray_status(app: AppHandle) -> Result<TrayState, String> {
+    toggle_tray_state(&app).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_tray_status(app: AppHandle, state: TrayState) -> Result<(), String> {
+    set_tray_state(&app, state).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_tray_status() -> TrayState {
+    get_tray_state()
+}
 
 
 #[tauri::command]
@@ -157,8 +187,7 @@ async fn create_popup_alert(
     .always_on_top(true)
     .skip_taskbar(false)
     .focused(true)
-    .build() {
-        Ok(window) => {
+    .build() {        Ok(_window) => {
             println!("Popup alert window created: {}", window_label);
             Ok(())
         },
@@ -200,8 +229,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())        .manage(FirewallState::default())
         .manage(BlockedDomains::default())
-        .manage(NotificationState::default())
-        .invoke_handler(tauri::generate_handler![
+        .manage(NotificationState::default())        .invoke_handler(tauri::generate_handler![
             greet,
             get_firewall_rules,
             add_firewall_rule,
@@ -217,11 +245,16 @@ pub fn run() {
             extract_and_handle_events,
             ask_ai,
             send_notification,
-            show_domain_blocked_notification,            read_flow_report,
+            show_domain_blocked_notification,
+            read_flow_report,
             generate_flow_report,
-            create_popup_alert,
-            get_notification_settings,
-            set_notification_settings
+            create_popup_alert,            get_notification_settings,
+            set_notification_settings,
+            check_tray_status,
+            set_tray_tooltip,
+            toggle_tray_status,
+            set_tray_status,
+            get_tray_status
         ]).setup(|app| {
             // Initialize blocked domains list from file synchronously
             let app_handle = app.handle().clone();
