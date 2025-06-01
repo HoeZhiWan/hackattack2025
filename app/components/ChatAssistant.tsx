@@ -11,13 +11,34 @@ export default function ChatAssistant({
     isOpen: boolean;
     onClose: () => void;
 }) {
-    const [messages, setMessages] = useState<{ role: string; text: string }[]>([]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [width, setWidth] = useState(400); // Initial width in px
     const isResizing = useRef(false);
     const drawerWrapperRef = useRef<HTMLDivElement>(null);
     const drawerRef = useRef<HTMLDivElement>(null);
-    const messagesEndRef = useRef<HTMLDivElement>(null); // <--- added ref for auto-scroll
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [showMenu, setShowMenu] = useState(false);
+    const photoInputRef = useRef<HTMLInputElement | null>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    // Voice recording related states and refs:
+    const [isVoiceMode, setIsVoiceMode] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const [audioChunks, setAudioChunks] = useState<BlobPart[]>([]);
+
+    type Message = {
+        role: string;
+        text: string;
+        audioUrl?: string | null;
+        photoUrl?: string;
+        fileUrl?: string;
+        fileName?: string;
+    };
+      
 
     // --- Remember chat history using localStorage ---
     useEffect(() => {
@@ -29,7 +50,112 @@ export default function ChatAssistant({
         localStorage.setItem("chatMessages", JSON.stringify(messages));
     }, [messages]);
 
+    // --- Voice recording logic ---
+    async function enableVoiceMode() {
+        try {
+            if (!streamRef.current) {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                streamRef.current = stream;
+            }
+
+            setIsVoiceMode(true);
+            setIsRecording(true);
+            setRecordedAudioUrl(null);
+            setInput("");
+            setAudioChunks([]);
+
+            const mediaRecorder = new MediaRecorder(streamRef.current!);
+            mediaRecorderRef.current = mediaRecorder;
+
+            mediaRecorder.ondataavailable = (event) => {
+                setAudioChunks((prev) => [...prev, event.data]);
+            };
+
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+                const url = URL.createObjectURL(audioBlob);
+                setRecordedAudioUrl(url);
+                setIsRecording(false);
+                setAudioChunks([]);
+            };
+
+            mediaRecorder.start();
+        } catch (err) {
+            alert("Microphone access denied or not available.");
+            console.error(err);
+            setIsVoiceMode(false);
+            setIsRecording(false);
+        }
+    }
+
     const sendMessage = async () => {
+        if (isVoiceMode) {
+            if (isRecording && mediaRecorderRef.current) {
+                const audioUrl = await new Promise<string>((resolve) => {
+                    mediaRecorderRef.current!.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+                        const url = URL.createObjectURL(audioBlob);
+                        setRecordedAudioUrl(url);
+                        setIsRecording(false);
+                        setAudioChunks([]);
+                        resolve(url); // Resolve with the audio URL immediately
+                    };
+                    mediaRecorderRef.current!.stop();
+                });
+
+                if (!audioUrl) {
+                    alert("Please record your voice message first.");
+                    return; // Prevent sending empty message
+                }
+
+                const userVoiceMessage = {
+                    role: "user",
+                    text: "[Voice message]",
+                    audioUrl,
+                };
+
+                setMessages((prev) => [...prev, userVoiceMessage]);
+                setRecordedAudioUrl(null);
+                setInput("");
+                setIsVoiceMode(false);
+                setIsRecording(false);
+
+                if (streamRef.current) {
+                    streamRef.current.getTracks().forEach((track) => track.stop());
+                    streamRef.current = null;
+                }
+
+                return;
+            }
+
+            // If not recording but have recorded audio
+            if (!recordedAudioUrl) {
+                alert("Please record your voice message first.");
+                return;
+            }
+
+            // Send recorded voice message directly
+            const userVoiceMessage = {
+                role: "user",
+                text: "[Voice message]",
+                audioUrl: recordedAudioUrl,
+            };
+
+            setMessages((prev) => [...prev, userVoiceMessage]);
+            setRecordedAudioUrl(null);
+            setInput("");
+            setIsVoiceMode(false);
+            setIsRecording(false);
+
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach((track) => track.stop());
+                streamRef.current = null;
+            }
+
+            return;
+        }
+
+        // Text message logic...
         if (!input.trim()) return;
 
         const userMessage = { role: "user", text: input };
@@ -47,7 +173,7 @@ export default function ChatAssistant({
             ]);
             console.error(err);
         }
-    };
+    }; 
 
     // --- Resizing logic ---
     const startResize = () => {
@@ -65,13 +191,45 @@ export default function ChatAssistant({
         localStorage.removeItem("chatMessages");
     };
 
-
     const onResize = (e: MouseEvent) => {
         if (isResizing.current) {
             const newWidth = window.innerWidth - e.clientX;
             setWidth(Math.max(300, Math.min(newWidth, window.innerWidth * 0.7))); // min 300px, max 70% of screen
         }
     };
+
+    const handleAddPhotoClick = () => {
+        photoInputRef.current?.click();
+    };
+
+    const handleAddFileClick = () => {
+        fileInputRef.current?.click();
+    };
+      
+    const handlePhotoSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const url = URL.createObjectURL(file);
+
+        setMessages((prev) => [
+            ...prev,
+            { role: "user", text: "[Photo]", photoUrl: url },
+        ]);
+    };
+
+    const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const url = URL.createObjectURL(file);
+
+        setMessages((prev) => [
+            ...prev,
+            { role: "user", text: "[File]", fileUrl: url, fileName: file.name },
+        ]);
+    };
+       
 
     useEffect(() => {
         window.addEventListener("mousemove", onResize);
@@ -114,10 +272,7 @@ export default function ChatAssistant({
                 }`}
         >
             {/* Dimmed click-to-close background */}
-            <div
-                //className={`absolute inset-0 bg-white bg-opacity-100 transition-opacity duration-300`}
-                onClick={onClose}
-            />
+            <div onClick={onClose} className="absolute inset-0" />
 
             {/* Chat drawer */}
             <div ref={drawerWrapperRef}>
@@ -146,17 +301,18 @@ export default function ChatAssistant({
                             >
                                 Clear History
                             </button>
-                            <button onClick={onClose} className="text-white text-2xl">&times;</button>
+                            <button onClick={onClose} className="text-white text-2xl">
+                                &times;
+                            </button>
                         </div>
                     </div>
-
 
                     {/* Chat body */}
                     <div className="flex-1 p-4 space-y-4 overflow-y-auto">
                         {messages.map((msg, idx) => (
                             <div
                                 key={idx}
-                                className={`p-3 rounded max-w-[75%] text-white ${msg.role === "user" ? "ml-auto text-right" : "mr-auto text-left"
+                                className={`p-3 rounded max-w-[75%] text-white ${msg.role === "user" ? "ml-auto text-left" : "mr-auto text-left"
                                     }`}
                                 style={{
                                     background:
@@ -173,7 +329,23 @@ export default function ChatAssistant({
                                             : "⚠️ Error"}
                                 </p>
                                 <div className="prose prose-invert max-w-none break-words">
-                                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                                    {msg.photoUrl ? (
+                                        <img
+                                            src={msg.photoUrl}
+                                            alt="User upload"
+                                            className="max-w-full rounded"
+                                            style={{ maxHeight: 200 }}
+                                        />
+                                    ) : msg.fileUrl ? (
+                                        <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="underline text-blue-400">
+                                            {msg.fileName || "Download file"}
+                                        </a>
+                                    ) : msg.audioUrl ? (
+                                        <audio controls src={msg.audioUrl} className="w-full rounded" />
+                                    ) : (
+                                        <ReactMarkdown>{msg.text}</ReactMarkdown>
+                                    )}
+
                                 </div>
                                 {msg.role === "assistant" && (
                                     <div className="mt-2 flex space-x-2 text-sm justify-start">
@@ -187,34 +359,125 @@ export default function ChatAssistant({
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input box */}
-                    <div className="flex p-4 gap-2 border-t border-gray-700 bg-[#1a1a1a]">
+                    {/* Input box with voice mode and 3-dot menu */}
+                    <div className="flex p-4 gap-2 items-center border-t border-gray-700 bg-[#1a1a1a] relative">
+                        {/* Microphone button - press once to start recording */}
+                        <button
+                            className={`px-3 py-2 rounded transition-colors ${isVoiceMode
+                                    ? isRecording
+                                        ? "bg-red-600 animate-pulse text-white"
+                                        : "bg-green-600 text-white"
+                                    : "bg-gray-700 hover:bg-gray-600 text-white"
+                                }`}
+                            onClick={() => {
+                                if (!isVoiceMode) {
+                                    enableVoiceMode(); // Starts recording immediately
+                                }
+                                // If already in voice mode, do nothing on mic click
+                            }}
+                            title={
+                                !isVoiceMode
+                                    ? "Start Recording"
+                                    : isRecording
+                                        ? "Recording..."
+                                        : "Ready to send"
+                            }
+                        >
+                            🎙️
+                        </button>
+
+                        {/* Input field */}
                         <input
-                            className="flex-1 p-2 rounded bg-white text-black placeholder-gray-500"
+                            className={`flex-1 p-2 rounded placeholder-gray-500 transition ${isVoiceMode
+                                    ? "bg-gray-400 text-white italic cursor-not-allowed"
+                                    : "bg-white text-black"
+                                }`}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder="Ask your cybersecurity question..."
+                            placeholder={
+                                isVoiceMode
+                                    ? isRecording
+                                        ? "Recording... Press Send to stop and send"
+                                        : recordedAudioUrl
+                                            ? "Voice recorded! Press Send"
+                                            : "Press 🎙️ to start recording"
+                                    : "Ask your cybersecurity question..."
+                            }
+                            disabled={isVoiceMode}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault(); // prevent newline if using textarea or multi-line input
+                                    e.preventDefault();
                                     sendMessage();
                                 }
                             }}
                         />
 
+                        {/* Send button */}
                         <button
                             onClick={sendMessage}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
+                            disabled={
+                                (isVoiceMode && !recordedAudioUrl && !isRecording) ||
+                                (!isVoiceMode && !input.trim())
+                            }
+                            title="Send message"
                         >
                             Send
                         </button>
-                    </div>
 
-                    {/* Resizer Handle */}
-                    <div
-                        onMouseDown={startResize}
-                        className="absolute left-0 top-0 h-full w-1 cursor-ew-resize bg-transparent hover:bg-white/10 transition"
-                    />
+                        {/* 3-dot menu toggle */}
+                        <button
+                            onClick={() => setShowMenu((v) => !v)}
+                            className="ml-1 text-xl px-2 py-1 hover:bg-gray-700 rounded"
+                            title="More options"
+                        >
+                            &#x22EE;
+                        </button>
+
+                        {/* Dropdown menu */}
+                        {showMenu && (
+                            <div
+                                className="absolute bottom-full right-0 mb-10 bg-[#222] border border-gray-600 rounded shadow-lg p-2 w-40 z-50"
+                                onClick={() => setShowMenu(false)}
+                            >
+                                <button
+                                    onClick={() => photoInputRef.current?.click()}
+                                    className="block w-full text-left px-2 py-1 hover:bg-gray-700 rounded"
+                                >
+                                    Add Photo
+                                </button>
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="block w-full text-left px-2 py-1 hover:bg-gray-700 rounded"
+                                >
+                                    Add File
+                                </button>
+
+                            </div>
+                        )}
+
+                        {/* Hidden file inputs should be here */}
+                        <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: "none" }}
+                            ref={photoInputRef}
+                            onChange={handlePhotoSelected}
+                        />
+
+                        <input
+                            type="file"
+                            style={{ display: "none" }}
+                            ref={fileInputRef}
+                            onChange={handleFileSelected}
+                        />
+
+                        {/* Resize handle */}
+                        <div
+                            className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-gray-600"
+                            onMouseDown={startResize}
+                        />
+                    </div>
                 </div>
             </div>
         </div>
