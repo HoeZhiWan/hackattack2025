@@ -87,7 +87,7 @@ export default function Page() {
               onClick={() => setShowAssistant(true)}
               className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold px-6 py-2 rounded-xl shadow-md backdrop-blur-lg transition-transform transform hover:scale-105"
             >
-              Open AI Assistant
+              AI Chat Assistant
             </button>
           </div>
         </div>
