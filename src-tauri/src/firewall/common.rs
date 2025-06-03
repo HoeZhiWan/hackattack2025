@@ -99,6 +99,9 @@ impl Default for NotificationState {
 
 // Function to run netsh commands
 pub async fn run_netsh_command(app: &AppHandle, args: Vec<&str>) -> Result<String, FirewallError> {
+    // Display the command being run
+    println!("[NETSH] Running: netsh {}", args.join(" "));
+
     let output = app.shell()
         .command("netsh")
         .args(args)
@@ -110,7 +113,14 @@ pub async fn run_netsh_command(app: &AppHandle, args: Vec<&str>) -> Result<Strin
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     
     if !output.status.success() {
-        return Err(FirewallError::CommandError(format!("Command failed: {}", stderr)));
+        let err_msg = if !stderr.trim().is_empty() {
+            format!("Command failed: {}", stderr.trim())
+        } else if !stdout.trim().is_empty() {
+            format!("Command failed (no stderr): {}", stdout.trim())
+        } else {
+            "Command failed: Unknown error (no output)".to_string()
+        };
+        return Err(FirewallError::CommandError(err_msg));
     }
     
     Ok(stdout)
@@ -190,6 +200,22 @@ pub async fn run_elevated_powershell(app: &AppHandle, script: &str) -> Result<St
     println!("[POWERSHELL] Command stdout: {}", stdout);
     
     Ok(stdout)
+}
+
+// Function to run elevated netsh commands
+pub async fn run_elevated_netsh_command(app: &AppHandle, args: Vec<&str>) -> Result<String, FirewallError> {
+    let netsh_cmd = format!("netsh {}", args.join(" "));
+    let script = format!("{};", netsh_cmd);
+    println!("[ELEVATED NETSH] Running: {}", netsh_cmd);
+
+    match run_elevated_powershell(app, &script).await {
+        Ok(stdout) => Ok(stdout),
+        Err(e) => {
+            let err_msg = format!("Elevated netsh command failed: {}\nCommand: {}", e, netsh_cmd);
+            println!("[ELEVATED NETSH] Error: {}", err_msg);
+            Err(FirewallError::CommandError(err_msg))
+        }
+    }
 }
 
 // Function to check if elevated permissions are required and elevate if needed

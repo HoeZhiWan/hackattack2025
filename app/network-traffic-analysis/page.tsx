@@ -15,12 +15,15 @@ type AlertEvent = {
   severity?: number;
 };
 
+const PAGE_SIZE = 1000;
+
 export default function NetworkTrafficAnalysisPage() {
   const [isActive, setIsActive] = useState<boolean | null>(null);
   const [alerts, setAlerts] = useState<AlertEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
 
   const router = useRouter();
 
@@ -82,6 +85,15 @@ export default function NetworkTrafficAnalysisPage() {
     severityFilter === null
       ? sortedAlerts
       : sortedAlerts.filter((alert) => alert.severity === severityFilter);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredAlerts.length / PAGE_SIZE);
+  const pagedAlerts = filteredAlerts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  // Reset to first page when filter changes or alerts change
+  useEffect(() => {
+    setPage(0);
+  }, [severityFilter, alerts]);
 
   // Helper to format ISO timestamp to "YYYY-MM-DD HH:mm:ss"
   function formatTimestamp(ts?: string) {
@@ -193,46 +205,95 @@ export default function NetworkTrafficAnalysisPage() {
           ) : filteredAlerts.length === 0 ? (
             <p>No alerts found.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full table-auto border">
-                <thead>
-                  <tr>
-                    <th className="px-2 py-1 border">Time</th>
-                    <th className="px-2 py-1 border">Source</th>
-                    <th className="px-2 py-1 border">Destination</th>
-                    <th className="px-2 py-1 border">Signature</th>
-                    <th className="px-2 py-1 border">Category</th>
-                    <th className="px-2 py-1 border">Severity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAlerts.map((alert, idx) => (
-                    <tr key={idx}>
-                      <td className="px-2 py-1 border">{formatTimestamp(alert.timestamp)}</td>
-                      <td className="px-2 py-1 border">
-                        {alert.src_ip}
-                        {alert.src_port ? `:${alert.src_port}` : ""}
-                      </td>
-                      <td className="px-2 py-1 border">
-                        {alert.dest_ip}
-                        {alert.dest_port ? `:${alert.dest_port}` : ""}
-                      </td>
-                      <td className="px-2 py-1 border">{alert.signature}</td>
-                      <td className="px-2 py-1 border">{alert.category}</td>
-                      <td className="px-2 py-1 border">
-                        {alert.severity === 1
-                          ? "High"
-                          : alert.severity === 2
-                          ? "Medium"
-                          : alert.severity === 3
-                          ? "Low"
-                          : alert.severity}
-                      </td>
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white">
+                  <thead>
+                    <tr>
+                      <th className="py-2 px-4 bg-[#f5f5f0] text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        No.
+                      </th>
+                      <th className="py-2 px-4 bg-[#f5f5f0] text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Time
+                      </th>
+                      <th className="py-2 px-4 bg-[#f5f5f0] text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Source
+                      </th>
+                      <th className="py-2 px-4 bg-[#f5f5f0] text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Destination
+                      </th>
+                      <th className="py-2 px-4 bg-[#f5f5f0] text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Signature
+                      </th>
+                      <th className="py-2 px-4 bg-[#f5f5f0] text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Category
+                      </th>
+                      <th className="py-2 px-4 bg-[#f5f5f0] text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Severity
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {pagedAlerts.map((alert, idx) => (
+                      <tr key={idx} className="border-b border-gray-100">
+                        <td className="py-2 px-4">{page * PAGE_SIZE + idx + 1}</td>
+                        <td className="py-2 px-4">{formatTimestamp(alert.timestamp)}</td>
+                        <td className="py-2 px-4">
+                          {alert.src_ip}
+                          {alert.src_port ? `:${alert.src_port}` : ""}
+                        </td>
+                        <td className="py-2 px-4">
+                          {alert.dest_ip}
+                          {alert.dest_port ? `:${alert.dest_port}` : ""}
+                        </td>
+                        <td className="py-2 px-4">{alert.signature}</td>
+                        <td className="py-2 px-4">{alert.category}</td>
+                        <td className="py-2 px-4">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            alert.severity === 1
+                              ? "bg-red-100 text-red-800"
+                              : alert.severity === 2
+                              ? "bg-yellow-100 text-yellow-800"
+                              : alert.severity === 3
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}>
+                            {alert.severity === 1
+                              ? "High"
+                              : alert.severity === 2
+                              ? "Medium"
+                              : alert.severity === 3
+                              ? "Low"
+                              : alert.severity}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-4">
+                  <button
+                    className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                  >
+                    Prev Page
+                  </button>
+                  <span>
+                    Page {page + 1} of {totalPages}
+                  </span>
+                  <button
+                    className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={page >= totalPages - 1}
+                  >
+                    Next Page
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

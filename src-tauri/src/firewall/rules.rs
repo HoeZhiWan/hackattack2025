@@ -1,6 +1,6 @@
 // rules.rs - Functions for managing Windows Firewall rules
 use tauri::{AppHandle, State};
-use crate::firewall::common::{FirewallError, FirewallRuleInfo, FirewallState, run_netsh_command};
+use crate::firewall::common::{FirewallError, FirewallRuleInfo, FirewallState, run_netsh_command, run_elevated_netsh_command};
 
 // Parse the output of netsh advfirewall firewall show rule command
 fn parse_firewall_rules(output: &str) -> Result<Vec<FirewallRuleInfo>, FirewallError> {
@@ -64,6 +64,15 @@ fn parse_firewall_rules(output: &str) -> Result<Vec<FirewallRuleInfo>, FirewallE
     Ok(rules)
 }
 
+// Helper to quote a string if not already quoted
+fn quote_if_needed(s: &str) -> String {
+    if s.starts_with('"') && s.ends_with('"') {
+        s.to_string()
+    } else {
+        format!("\"{}\"", s)
+    }
+}
+
 // Commands exposed to the frontend
 #[tauri::command]
 pub async fn get_firewall_rules(app: AppHandle, state: State<'_, FirewallState>) -> Result<Vec<FirewallRuleInfo>, String> {
@@ -103,7 +112,11 @@ pub async fn add_firewall_rule(
     println!("Adding new firewall rule: {}", rule_info.name);
     
     // Convert values to strings first to extend their lifetime
-    let direction_lower = rule_info.direction.to_lowercase();
+    let direction_lower = match rule_info.direction.to_lowercase().as_str() {
+        "inbound" => "in".to_string(),
+        "outbound" => "out".to_string(),
+        other => other.to_string(),
+    };
     let action_lower = rule_info.action.to_lowercase();
     // Pre-create protocol string if needed
     let protocol_lower = if rule_info.protocol != "Any" {
@@ -116,44 +129,43 @@ pub async fn add_firewall_rule(
 
     // Build the netsh command for adding a rule
     let mut args = vec![
-        "advfirewall", "firewall", "add", "rule",
-        "name", &rule_info.name,
-        "dir", &direction_lower,
-        "action", &action_lower,
+        "advfirewall".to_string(),
+        "firewall".to_string(),
+        "add".to_string(),
+        "rule".to_string(),
+        format!("name={}", quote_if_needed(&rule_info.name)),
+        format!("dir={}", direction_lower),
+        format!("action={}", action_lower),
     ];
     
     // Add description if not empty
     if !rule_info.description.is_empty() {
-        args.push("description");
-        args.push(&rule_info.description);
+        args.push(format!("description={}", rule_info.description));
     }
     
-    // Add protocol if specified
-    if let Some(ref proto) = protocol_lower {
-        args.push("protocol");
-        args.push(proto);
-    }
-    
-    // Add program path if specified
+    // If program is specified, do NOT specify protocol or port
     if let Some(path) = &rule_info.application_path {
         if !path.is_empty() {
-            args.push("program");
-            args.push(path);
+            args.push(format!("program={}", quote_if_needed(path)));
+        }
+    } else {
+        // Add protocol if specified and program is NOT specified
+        if let Some(ref proto) = protocol_lower {
+            args.push(format!("protocol={}", proto));
+        }
+        // Add local port if specified and program is NOT specified
+        if let Some(ref port) = port_str {
+            args.push(format!("localport={}", port));
         }
     }
     
-    // Add local port if specified
-    if let Some(ref port) = port_str {
-        args.push("localport");
-        args.push(port);
-    }
-    
     // Add enabled status
-    args.push("enable");
-    args.push(if rule_info.enabled { "yes" } else { "no" });
+    args.push(format!("enable={}", if rule_info.enabled { "yes" } else { "no" }));
     
+    // When calling run_netsh_command, convert to Vec<&str>
+    let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     // Execute the command
-    match run_netsh_command(&app, args).await {
+    match run_elevated_netsh_command(&app, args_ref).await {
         Ok(_) => {
             println!("Successfully added firewall rule: {}", rule_info.name);
             // Update our state
@@ -177,10 +189,16 @@ pub async fn remove_firewall_rule(
     println!("Removing firewall rule: {}", rule_name);
     
     // Build the netsh command for removing a rule
-    let args = vec!["advfirewall", "firewall", "delete", "rule", "name", &rule_name];
-    
+    let mut args = vec![
+        "advfirewall".to_string(),
+        "firewall".to_string(),
+        "delete".to_string(),
+        "rule".to_string(),
+        format!("name={}", quote_if_needed(&rule_name)),
+    ];
+    let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     // Execute the command
-    match run_netsh_command(&app, args).await {
+    match run_elevated_netsh_command(&app, args_ref).await {
         Ok(_) => {
             println!("Successfully removed firewall rule: {}", rule_name);
             // Update our state
@@ -205,12 +223,18 @@ pub async fn enable_disable_rule(
     println!("{} firewall rule: {}", if enable { "Enabling" } else { "Disabling" }, rule_name);
     
     // Build the netsh command for enabling/disabling a rule
-    let args = vec!["advfirewall", "firewall", "set", "rule", 
-                    "name", &rule_name, 
-                    "new", "enable", if enable { "yes" } else { "no" }];
-    
+    let mut args = vec![
+        "advfirewall".to_string(),
+        "firewall".to_string(),
+        "set".to_string(),
+        "rule".to_string(),
+        format!("name={}", quote_if_needed(&rule_name)),
+        "new".to_string(),
+        format!("enable={}", if enable { "yes" } else { "no" }),
+    ];
+    let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     // Execute the command
-    match run_netsh_command(&app, args).await {
+    match run_elevated_netsh_command(&app, args_ref).await {
         Ok(_) => {
             println!("Successfully {} firewall rule: {}", 
                      if enable { "enabled" } else { "disabled" }, 

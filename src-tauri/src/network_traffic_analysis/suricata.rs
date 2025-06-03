@@ -298,3 +298,4 @@ pub struct FlowEvent {
 // the home network address is not dynamic, (set to 192.168.0.0/24)
 // tbh there should be a way to change configurations but it seems to take alot of time
 // file dir: C:\Users\username\AppData\Local\Temp\suricata_logs\
+// signature id : 2210044 -- generates alot while calling >:(
