@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 interface AlertData {
@@ -9,7 +9,7 @@ interface AlertData {
   type: string;
 }
 
-export default function PopupAlert() {
+function PopupAlertContent() {
   const searchParams = useSearchParams();
   const [alertData, setAlertData] = useState<AlertData>({
     title: '',
@@ -128,9 +128,32 @@ export default function PopupAlert() {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500 bg-white/70 rounded-full px-3 py-1 inline-block">
             🛡️ Security Smile Security Alert
-          </p>
+          </p>        </div>
+      </div>
+    </div>
+  );
+}
+
+// Loading component for Suspense fallback
+function PopupAlertLoading() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+      <div className="max-w-md w-full">
+        <div className="rounded-xl border-2 p-6 shadow-xl backdrop-blur-sm bg-blue-50 border-blue-200 text-blue-800">
+          <div className="flex items-center justify-center space-x-3">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="text-lg font-semibold">Loading...</span>
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PopupAlert() {
+  return (
+    <Suspense fallback={<PopupAlertLoading />}>
+      <PopupAlertContent />
+    </Suspense>
   );
 }

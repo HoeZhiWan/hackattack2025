@@ -160,18 +160,16 @@ export default function ChatAssistant({
 
         const userMessage = { role: "user", text: input };
         setMessages((prev) => [...prev, userMessage]);
-        setInput("");
-
-        try {
+        setInput("");        try {
             const response = await invoke<string>("ask_ai", { prompt: input });
             const aiMessage = { role: "assistant", text: response as string };
             setMessages((prev) => [...prev, aiMessage]);
         } catch (err) {
+            console.error("AI Error:", err);
             setMessages((prev) => [
                 ...prev,
-                { role: "error", text: "Failed to get response." },
+                { role: "error", text: `Failed to get response: ${err}` },
             ]);
-            console.error(err);
         }
     }; 
 

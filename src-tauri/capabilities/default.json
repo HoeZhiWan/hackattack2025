@@ -16,7 +16,8 @@
     {
       "identifier": "shell:allow-execute",
       "allow": [
-        {          "name": "cmd-admin",
+        {          
+          "name": "cmd-admin",
           "cmd": "cmd",
           "args": [
             "/c",
@@ -27,7 +28,8 @@
             }
           ]
         },
-        {          "name": "netsh-direct",
+        {         
+          "name": "netsh-direct",
           "cmd": "netsh",
           "args": [
             {
@@ -35,7 +37,8 @@
             }
           ]
         },
-        {          "name": "powershell-admin",
+        {          
+          "name": "powershell-admin",
           "cmd": "powershell",
           "args": [
             "-Command",
