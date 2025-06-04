@@ -24,55 +24,44 @@ pub struct FlowReport {
 
 #[tauri::command]
 pub fn generate_flow_report() -> Result<(), String> {
-    let flow_events = read_flow_events()?;
-
-    if flow_events.is_empty() {
+    let flow_events = read_flow_events()?;    if flow_events.is_empty() {
         return Err("No flow events found.".to_string());
     }
 
-    // Frequency maps
     let mut src_ip_freq: HashMap<String, u64> = HashMap::new();
     let mut dst_ip_freq: HashMap<String, u64> = HashMap::new();
     let mut src_port_freq: HashMap<u16, u64> = HashMap::new();
     let mut dst_port_freq: HashMap<u16, u64> = HashMap::new();
     let mut proto_freq: HashMap<String, u64> = HashMap::new();
 
-    // For time range
     let mut first_start_time = None;
     let mut last_end_time = None;
 
-    for (i, event) in flow_events.iter().enumerate() {
-        *src_ip_freq.entry(event.sourceip.clone()).or_insert(0) += 1;
+    for (i, event) in flow_events.iter().enumerate() {        *src_ip_freq.entry(event.sourceip.clone()).or_insert(0) += 1;
         *dst_ip_freq.entry(event.destinationip.clone()).or_insert(0) += 1;
         *src_port_freq.entry(event.sourceport).or_insert(0) += 1;
         *dst_port_freq.entry(event.destinationport).or_insert(0) += 1;
         *proto_freq.entry(event.protocol.clone()).or_insert(0) += 1;
 
-        // Find first start_time and last end_time
         if i == 0 {
-            first_start_time = Some(event.end_time.clone());
-        }
+            first_start_time = Some(event.end_time.clone());        }
         last_end_time = Some(event.start_time.clone());
     }
 
-    // Helper to get top 5
     fn top_n<T: Clone + Eq + std::hash::Hash + ToString>(freq: &HashMap<T, u64>, n: usize) -> Vec<TopEntry> {
         let mut v: Vec<_> = freq.iter().collect();
         v.sort_by(|a, b| b.1.cmp(a.1));
         v.iter().take(n).map(|(k, v)| TopEntry { name: k.to_string(), frequency: **v }).collect()
     }
 
-    // Helper to get all protocols
     fn all_proto(freq: &HashMap<String, u64>) -> Vec<TopEntry> {
         let mut v: Vec<_> = freq.iter().collect();
         v.sort_by(|a, b| b.1.cmp(a.1));
         v.iter().map(|(k, v)| TopEntry { name: k.to_string(), frequency: **v }).collect()
     }
 
-    // Helper to normalize IPv6 address if needed
     fn normalize_ip(ip: &str) -> String {
         if ip.contains(':') {
-            // Try to parse as IPv6 and compress it
             if let Ok(addr) = ip.parse::<Ipv6Addr>() {
                 return addr.to_string();
             }
@@ -80,7 +69,6 @@ pub fn generate_flow_report() -> Result<(), String> {
         ip.to_string()
     }
 
-    // Helper to get top 5 and normalize IPs if needed
     fn top_n_ip(freq: &HashMap<String, u64>, n: usize) -> Vec<TopEntry> {
         let mut v: Vec<_> = freq.iter().collect();
         v.sort_by(|a, b| b.1.cmp(a.1));
@@ -88,12 +76,7 @@ pub fn generate_flow_report() -> Result<(), String> {
             .take(n)
             .map(|(k, v)| TopEntry { name: normalize_ip(k), frequency: **v })
             .collect()
-    }
-
-    // Format time
-    fn format_time(s: &str) -> String {
-        // Example input: "2025-05-23T19:47:17.061034+0800"
-        // Desired output: "2025-05-23 19:47:17"
+    }    fn format_time(s: &str) -> String {
         if s.len() >= 19 {
             let year = &s[0..4];
             let month = &s[5..7];
@@ -118,11 +101,9 @@ pub fn generate_flow_report() -> Result<(), String> {
         top_sourceip: top_n_ip(&src_ip_freq, 5),
         top_destinationip: top_n_ip(&dst_ip_freq, 5),
         top_sourceport: top_n(&src_port_freq, 5),
-        top_destinationport: top_n(&dst_port_freq, 5),
-        protocol: all_proto(&proto_freq),
+        top_destinationport: top_n(&dst_port_freq, 5),        protocol: all_proto(&proto_freq),
     };
 
-    // Save to report.json in suricata_logs
     let mut log_dir = std::env::temp_dir();
     log_dir.push("suricata_logs");
     let mut report_path = log_dir.clone();
@@ -137,7 +118,6 @@ pub fn generate_flow_report() -> Result<(), String> {
 }
 
 #[tauri::command]
-/// Reads the flow report from the suricata_logs directory
 pub fn read_flow_report() -> Result<FlowReport, String> {
     let mut log_dir = std::env::temp_dir();
     log_dir.push("suricata_logs");

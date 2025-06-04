@@ -1,5 +1,4 @@
 
-use tauri::command;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +19,6 @@ struct GeminiRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     system_instruction: Option<SystemInstruction>,
 }
-
 
 #[derive(Serialize)]
 struct GeminiMessage {
@@ -52,20 +50,8 @@ struct GeminiContent {
 
 #[tauri::command]
 pub async fn ask_ai(prompt: String) -> Result<String, String> {
-    println!("ask_ai called with prompt: {}", prompt);
-    
-    let api_key = match std::env::var("GEMINI_API_KEY") {
-        Ok(key) => {
-            println!("API key found, length: {}", key.len());
-            key
-        },
-        Err(e) => {
-            println!("API key not found, error: {:?}", e);
-            return Err("GEMINI_API_KEY not set".to_string());
-        }
-    };
-
-    println!("Making API request with prompt: {}", prompt);
+    let api_key = std::env::var("GEMINI_API_KEY")
+        .map_err(|_| "GEMINI_API_KEY not set".to_string())?;
 
     let client = Client::new();
     let request = GeminiRequest {
@@ -79,28 +65,26 @@ pub async fn ask_ai(prompt: String) -> Result<String, String> {
                 text: SYSTEM_PROMPT.to_string(),
             }],
         }),
-    };    let res = client
+    };
+
+    let res = client
         .post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent")
         .query(&[("key", api_key)])
         .json(&request)
-        .send()
-        .await
+        .send()        .await
         .map_err(|e| format!("Network error: {}", e))?;
 
     let status = res.status();
-    println!("HTTP Status: {}", status);
 
     if !status.is_success() {
         let error_text = res.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-        println!("API Error Response: {}", error_text);
         return Err(format!("API returned error {}: {}", status, error_text));
     }
 
     let json: GeminiResponse = res.json().await.map_err(|e| format!("JSON parsing error: {}", e))?;
     
-    return if let Some(first) = json.candidates.first() {
+    if let Some(first) = json.candidates.first() {
         if let Some(part) = first.content.parts.first() {
-            
             Ok(part.text.clone())
         } else {
             Err("No content returned".into())
@@ -108,7 +92,6 @@ pub async fn ask_ai(prompt: String) -> Result<String, String> {
     } else {
         Err("No candidates returned".into())
     }
-    
 }
 
 

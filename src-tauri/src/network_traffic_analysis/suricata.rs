@@ -4,13 +4,10 @@ use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio, Child};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::thread;
-use std::time::Duration;
 use pnet::datalink;
 use socket2::{Socket, Domain, Type, Protocol};
 use std::net::SocketAddr;
 use sysinfo::System;
-use crate::network_traffic_analysis::report::{generate_flow_report};
 
 fn start_suricata(interface: &str, config_path: &str, log_dir: &str) -> std::io::Result<Child> {
     Command::new("suricata")
@@ -25,7 +22,6 @@ fn start_suricata(interface: &str, config_path: &str, log_dir: &str) -> std::io:
 fn pick_internet_interface() -> Option<String> {
     for iface in datalink::interfaces() {
         if !iface.is_loopback() && iface.ips.iter().any(|ip| ip.is_ipv4()) {
-            // Try to bind and connect to check connectivity
             if let Some(ip) = iface.ips.iter().find(|ip| ip.is_ipv4()).map(|ip| ip.ip()) {
                 let remote = SocketAddr::new("8.8.8.8".parse().unwrap(), 53);
                 let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).ok()?;
@@ -40,14 +36,11 @@ fn pick_internet_interface() -> Option<String> {
     None
 }
 
-/// Checks if a Suricata process is currently running.
-/// Returns true if Suricata is active, false otherwise.
 #[tauri::command]
 pub fn is_suricata_active() -> bool {
     let mut sys = System::new_all();
     sys.refresh_processes();
     for _process in sys.processes_by_name("suricata") {
-        // Optionally, check for specific arguments or parent process here
         return true;
     }
     false
@@ -57,40 +50,26 @@ pub fn is_suricata_active() -> bool {
 pub fn run_suricata() -> Result<(), String> {
     let interface = match pick_internet_interface() {
         Some(i) => i,
-        None => {
-            eprintln!("No suitable network interface found!");
-            return Ok(());
-        }
+        None => return Ok(()),
     };
 
     if is_suricata_active() {
-        eprintln!("Suricata is already running!");
         return Ok(());
     }
 
     let mut log_dir = env::temp_dir();
     log_dir.push("suricata_logs");
-
     let log_dir_str = log_dir.to_str().unwrap();
 
     let base_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("src")
         .join("network_traffic_analysis");
-
     let config_path = base_dir.join("suricata.yaml");
     let config_path_str = config_path.to_str().unwrap();
 
-    println!("Using interface: {}", interface);
-    println!("Using config: {}", config_path_str);
-    println!("Using log directory: {}", log_dir_str);
-
     std::fs::create_dir_all(log_dir_str)
-        .map_err(|e| format!("Failed to create log dir: {}", e))?;
-
-    let suricata_child = start_suricata(&interface, config_path_str, log_dir_str)
+        .map_err(|e| format!("Failed to create log dir: {}", e))?;    let _suricata_child = start_suricata(&interface, config_path_str, log_dir_str)
         .map_err(|e| format!("Failed to start Suricata: {}", e))?;
-    
-    println!("Suricata started with PID: {}", suricata_child.id());
 
     Ok(())
 }
@@ -99,10 +78,7 @@ pub fn run_suricata() -> Result<(), String> {
 pub fn kill_suricata() {
     let mut sys = System::new_all();
     sys.refresh_processes();
-    let mut killed_any = false;
     for process in sys.processes_by_name("suricata") {
-        println!("Killing Suricata process with PID: {}", process.pid());
-        // Try to kill the process
         #[cfg(unix)]
         {
             process.kill_with(Signal::Term);
@@ -111,10 +87,6 @@ pub fn kill_suricata() {
         {
             process.kill();
         }
-        killed_any = true;
-    }
-    if !killed_any {
-        println!("No Suricata process found to kill.");
     }
 }
 
@@ -133,12 +105,10 @@ pub struct AlertEvent {
 #[tauri::command]
 pub fn read_alert_events() -> Result<Vec<AlertEvent>, String> {
     let mut log_dir = env::temp_dir();
-    log_dir.push("suricata_logs");
-    let mut alert_path = log_dir.clone();
+    log_dir.push("suricata_logs");    let mut alert_path = log_dir.clone();
     alert_path.push("alert.json");
     let alert_path_str = alert_path.to_str().unwrap();
 
-    // Create alert.json if it does not exist
     if !std::path::Path::new(alert_path_str).exists() {
         File::create(alert_path_str)
             .map_err(|e| format!("Failed to create alert.json: {}", e))?;
@@ -171,7 +141,6 @@ pub fn read_alert_events() -> Result<Vec<AlertEvent>, String> {
 }
 
 #[tauri::command]
-// delete eve.json, add all alerts to alert.json, add all flows to flow.json, and generate flow report
 pub fn extract_and_handle_events() -> Result<(), String> {
     let mut log_dir = std::env::temp_dir();
     log_dir.push("suricata_logs");
@@ -187,12 +156,10 @@ pub fn extract_and_handle_events() -> Result<(), String> {
     flow_path.push("flow.json");
     let flow_path_str = flow_path.to_str().unwrap();
 
-    // Create alert.json if it does not exist
     if !std::path::Path::new(alert_path_str).exists() {
         File::create(alert_path_str)
             .map_err(|e| format!("Failed to create alert.json: {}", e))?;
     }
-    // Create flow.json if it does not exist
     if !std::path::Path::new(flow_path_str).exists() {
         File::create(flow_path_str)
             .map_err(|e| format!("Failed to create flow.json: {}", e))?;
@@ -224,11 +191,9 @@ pub fn extract_and_handle_events() -> Result<(), String> {
                     writeln!(flow_file, "{}", line).map_err(|e| format!("Failed to write: {}", e))?;
                 }
                 _ => {}
-            }
-        }
+            }        }
     }
 
-    // Truncate eve.json to delete all contents
     OpenOptions::new()
         .write(true)
         .truncate(true)
@@ -238,9 +203,7 @@ pub fn extract_and_handle_events() -> Result<(), String> {
     Ok(())
 }
 
-//read flow event for machine learning purposes
 pub fn read_flow_events() -> Result<Vec<FlowEvent>, String> {
-    // Always use the same temp location as extract_and_handle_events
     let mut log_dir = std::env::temp_dir();
     log_dir.push("suricata_logs");
     let mut flow_path = log_dir.clone();
@@ -255,7 +218,6 @@ pub fn read_flow_events() -> Result<Vec<FlowEvent>, String> {
     for line in reader.lines() {
         let line = line.map_err(|e| format!("Failed to read line: {}", e))?;
         if let Ok(json) = serde_json::from_str::<Value>(&line) {
-            // Defensive: Only process flow events
             if json.get("event_type").and_then(|v| v.as_str()) == Some("flow") {
                 let flow = json.get("flow").unwrap_or(&Value::Null);
                 let flow_event = FlowEvent {
@@ -289,13 +251,6 @@ pub struct FlowEvent {
     pub bytes_in: u64,
     pub bytes_out: u64,
     pub packets_in: u32,
-    pub packets_out: u32,
-    pub start_time: String,
+    pub packets_out: u32,    pub start_time: String,
     pub end_time: String,
 }
-
-// Note to self: directory might not work on other os / on deployment
-// the home network address is not dynamic, (set to 192.168.0.0/24)
-// tbh there should be a way to change configurations but it seems to take alot of time
-// file dir: C:\Users\username\AppData\Local\Temp\suricata_logs\
-// signature id : 2210044 -- generates alot while calling >:(
