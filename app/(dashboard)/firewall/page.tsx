@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import DeviceManagement from "./DeviceManagement";
-import DepartmentManagement from "./DepartmentManagement";
+import DeviceManagement from "./components/DeviceManagement";
+import DepartmentManagement from "./components/DepartmentManagement";
 console.log("DeviceManagement:", DeviceManagement);
 console.log("DepartmentManagement:", DepartmentManagement);
 

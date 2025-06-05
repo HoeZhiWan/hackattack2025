@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import ChatAssistant from "./components/ChatAssistant";
-import SecurityDashboard from "./components/SecurityDashboard";
+import ChatAssistant from "../components/features/ChatAssistant";
+import SecurityDashboard from "../components/dashboard/SecurityDashboard";
 import { CheckCircle } from "lucide-react";
 
 export default function Page() {

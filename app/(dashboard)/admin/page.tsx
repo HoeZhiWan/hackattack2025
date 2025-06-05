@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import Modal from "../components/Modal";
-import { useNotification } from "../components/NotificationProvider";
+import Modal from "../../components/ui/Modal";
+import { useNotification } from "../../components/features/NotificationProvider";
 import { 
   createPopupAlert, 
   showSecurityAlert, 
@@ -11,7 +11,7 @@ import {
   showIntrusionAlert,
   showFirewallAlert,
   AlertType
-} from "../utils/popup-alerts";
+} from "../../lib/utils/popup-alerts";
 
 export default function AdminPage() {
   const [systemInfo, setSystemInfo] = useState({

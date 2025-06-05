@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import Modal from './Modal';
+import Modal from '../ui/Modal';
 import { useNotification } from './NotificationProvider';
 import { 
   createPopupAlert, 
@@ -10,7 +10,7 @@ import {
   showIntrusionAlert,
   showFirewallAlert,
   AlertType
-} from '../utils/popup-alerts';
+} from '../../lib/utils/popup-alerts';
 
 const PopupDemo: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);

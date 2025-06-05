@@ -18,7 +18,7 @@ import {
 import SecurityDashboardCard from "./SecurityDashboardCard";
 import NetworkIntrusionCard from "./NetworkIntrusionCard";
 import RecentActivityItem from "./RecentActivityItem";
-import Button from "./Button";
+import Button from "../ui/Button";
 
 const incidentTrendData = [
   { month: "Jan", incidents: 45 },
