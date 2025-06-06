@@ -4,7 +4,7 @@
 
 ## 🎬 Links
 
-- **📺 Demo Video**: [Video Link](https://your-video-link.com)
+- **📺 Demo Video**: [Video Link](https://drive.google.com/file/d/1w7aaYeZL5IWueo62luYmOceDklNVr9Uh/view?usp=sharing)
 - **🎨 Presentation Slides**: [Canva Link](https://www.canva.com/design/DAGoz6FV8WQ/xNwbbauNySu1tWMrUZ0zUQ/view?utm_content=DAGoz6FV8WQ&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hf29dd10416)
 
 ## 🏗️ System Architecture
